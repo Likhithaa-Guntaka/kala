@@ -3,6 +3,21 @@ import { z } from 'zod';
 
 import { draftImpactReportTool, findGrantsTool, remindDeadlineTool } from './tools/index.js';
 
+// Authentication.
+// Benvu runs on the Claude Agent SDK, which resolves credentials in this order:
+//   1. A real ANTHROPIC_API_KEY, if one is provided.
+//   2. Otherwise, the logged-in Claude Code session (subscription / OAuth) —
+//      no external API key required. This is how Benvu runs in the sandbox.
+// Strip empty or placeholder keys (e.g. a leftover `.env` value) so they can
+// never override the session credentials. A real `sk-ant-…` key is preserved.
+const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+if (!apiKey || apiKey === 'YOUR_ANTHROPIC_API_KEY') {
+  delete process.env.ANTHROPIC_API_KEY;
+}
+
+/** How Benvu is authenticating to Claude: an explicit API key, or the Claude Code session. */
+export const AUTH_MODE = process.env.ANTHROPIC_API_KEY ? 'api-key' : 'claude-code-session';
+
 const BENVU_SYSTEM_PROMPT = `\
 You are Benvu, a friendly assistant for nonprofit staff. You help people find grants, \
 draft reports, track deadlines, and communicate — all through Slack.

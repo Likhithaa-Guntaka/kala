@@ -1,1 +1,1 @@
-export { runBenvuAgent } from './benvu.js';
+export { AUTH_MODE, runBenvuAgent } from './benvu.js';

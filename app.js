@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import { App, LogLevel } from '@slack/bolt';
 
+import { AUTH_MODE } from './agent/index.js';
 import { registerListeners } from './listeners/index.js';
 
 const app = new App({
@@ -16,5 +17,5 @@ registerListeners(app);
 
 (async () => {
   await app.start();
-  app.logger.info('Benvu is running!');
+  app.logger.info(`Benvu is running! (Claude auth: ${AUTH_MODE})`);
 })();

@@ -7,6 +7,7 @@ import pkg from '@slack/oauth';
 
 const { FileInstallationStore } = pkg;
 
+import { AUTH_MODE } from './agent/index.js';
 import { registerListeners } from './listeners/index.js';
 
 const manifest = JSON.parse(readFileSync('manifest.json', 'utf-8'));
@@ -60,7 +61,7 @@ registerListeners(app);
 (async () => {
   const port = Number.parseInt(process.env.PORT || '3000', 10);
   await app.start(port);
-  app.logger.info(`Benvu is running on port ${port}!`);
+  app.logger.info(`Benvu is running on port ${port}! (Claude auth: ${AUTH_MODE})`);
   if (process.env.SLACK_REDIRECT_URI) {
     const origin = new URL(process.env.SLACK_REDIRECT_URI).origin;
     app.logger.info(`Connect the Slack MCP Server: ${origin}/slack/install`);

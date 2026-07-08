@@ -105,14 +105,20 @@ npm install
 
 ### Anthropic Setup
 
-This app uses Claude through the Claude Agent SDK.
+Benvu runs on Claude through the Claude Agent SDK. The SDK resolves credentials automatically, so you have two options:
+
+**Option A — Claude Code session (no API key).** If you're signed in to [Claude Code](https://claude.com/claude-code) (a subscription or OAuth session), Benvu authenticates through that session and needs **no `ANTHROPIC_API_KEY`**. This is the default in the sandbox — leave the key unset in `.env` and you're done. On startup the app logs `Claude auth: claude-code-session` to confirm.
+
+**Option B — External API key.** To use the external Claude API instead:
 
 1. Create an API key from your [Anthropic dashboard](https://console.anthropic.com/settings/keys).
-2. Save the Anthropic API key to `.env`:
+2. Set it in `.env`:
 
 ```sh
-ANTHROPIC_API_KEY=YOUR_ANTHROPIC_API_KEY
+ANTHROPIC_API_KEY=sk-ant-...
 ```
+
+The app logs `Claude auth: api-key` when a key is used. A placeholder or empty value is ignored so it can't override a working session.
 
 ## Development
 

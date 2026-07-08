@@ -72,6 +72,8 @@ The agent is defined in `agent/benvu.js` using the Claude Agent SDK:
 - Model: `claude-sonnet-4-20250514`
 - The system prompt instructs Benvu to detect the user's language and respond in it
 
+**Authentication.** No external API key is required. The Claude Agent SDK authenticates via the logged-in Claude Code session (subscription / OAuth) when `ANTHROPIC_API_KEY` is unset — this is how Benvu runs in the sandbox. `agent/benvu.js` strips empty or placeholder keys (so a leftover `.env` value can't override the session) and exports `AUTH_MODE` (`'claude-code-session'` or `'api-key'`), which the app logs at startup. Set a real `sk-ant-…` key only to use the external API instead.
+
 ### Conversation Management
 
 `thread-context/store.js` exports a `SessionStore` that stores **session IDs only** (not full message history). The Claude Agent SDK manages conversation history server-side. The store passes `{ resume: sessionId }` on subsequent turns to continue a conversation.

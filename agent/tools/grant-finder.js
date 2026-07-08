@@ -1,109 +1,216 @@
 import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
-/**
- * @typedef {Object} Grant
- * @property {string} name
- * @property {string} deadline
- * @property {string} amount
- * @property {string} eligibility
- */
+// Grants.gov public Search API — free, no API key required.
+// search2 returns matching opportunities (title, agency, close date) but NOT
+// award amounts; fetchOpportunity returns the funding detail for one opportunity.
+const SEARCH_URL = 'https://api.grants.gov/v1/api/search2';
+const DETAIL_URL = 'https://api.grants.gov/v1/api/fetchOpportunity';
+const LISTING_URL = 'https://www.grants.gov/search-results-detail/';
+
+// Map a plain-language category to a Grants.gov funding-category code. Applied as
+// a server-side filter, which sharpens results a lot. Unmatched categories are ignored.
+/** @type {Record<string, string>} */
+const CATEGORY_CODES = {
+  education: 'ED',
+  health: 'HL',
+  environment: 'ENV',
+  arts: 'AR',
+  humanities: 'HU',
+  housing: 'HO',
+  food: 'FN',
+  nutrition: 'FN',
+  employment: 'ELT',
+  labor: 'ELT',
+  training: 'ELT',
+  community: 'CD',
+  'community development': 'CD',
+  agriculture: 'AG',
+  energy: 'EN',
+  science: 'ST',
+  technology: 'ST',
+  'income security': 'ISS',
+  social: 'ISS',
+  disaster: 'DPR',
+  law: 'LJL',
+  justice: 'LJL',
+  'natural resources': 'NR',
+  business: 'BC',
+  transportation: 'T',
+};
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * Placeholder grant search. In production this would query a real grants
- * database or API. For now it returns 10 plausible, varied grants that
- * reference the user's query so the agent has realistic data to summarize.
- * @param {string} query
- * @returns {Grant[]}
+ * POST JSON to a URL with a timeout. Throws on network error, timeout, or non-2xx.
+ * @param {string} url
+ * @param {Record<string, unknown>} body
+ * @param {number} timeoutMs
+ * @returns {Promise<any>}
  */
-function searchGrants(query) {
-  const focus = query.trim() || 'community programs';
+async function postJson(url, body, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-  const funders = [
-    'Open Horizons Foundation',
-    'Bright Futures Fund',
-    'Community Roots Trust',
-    'Greenlight Grants',
-    'The Willow Foundation',
-    'United Neighbors Fund',
-    'Cornerstone Charitable Trust',
-    'New Leaf Initiative',
-    'Riverside Community Foundation',
-    'Global Impact Collective',
-  ];
+/**
+ * Parse a Grants.gov numeric string (e.g. "220000") into a number, or null.
+ * @param {unknown} value
+ * @returns {number | null}
+ */
+function toAmount(value) {
+  if (value == null) return null;
+  const n = Number(String(value).replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
 
-  const deadlines = [
-    'March 15, 2026',
-    'April 30, 2026',
-    'May 1, 2026',
-    'June 12, 2026',
-    'July 31, 2026',
-    'August 20, 2026',
-    'September 9, 2026',
-    'October 15, 2026',
-    'November 3, 2026',
-    'Rolling (reviewed monthly)',
-  ];
+/** @param {number} n */
+function formatUsd(n) {
+  return `$${Math.round(n).toLocaleString('en-US')}`;
+}
 
-  const amounts = [
-    'Up to $10,000',
-    '$5,000 – $25,000',
-    'Up to $50,000',
-    '$15,000 – $40,000',
-    'Up to $100,000',
-    '$2,500 – $10,000',
-    'Up to $75,000',
-    '$20,000 – $60,000',
-    'Up to $250,000',
-    '$1,000 – $5,000 micro-grants',
-  ];
+/** Clean stray markup/whitespace that Grants.gov titles sometimes carry. @param {string} title */
+function cleanTitle(title) {
+  return title
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
-  const eligibility = [
-    'Registered nonprofits with 501(c)(3) status or local equivalent.',
-    'Small, community-based organizations with annual budgets under $500K.',
-    'Nonprofits serving underserved or rural communities.',
-    'Organizations with at least two years of operating history.',
-    'New and grassroots groups welcome; fiscal sponsorship accepted.',
-    'Nonprofits working directly with youth or families.',
-    'Any charitable organization; no minimum budget required.',
-    'Groups partnering with at least one other local organization.',
-    'Nonprofits led by or primarily serving the communities they represent.',
-    'Open to nonprofits and social enterprises with a clear public benefit.',
-  ];
-
-  return funders.map((funder, i) => ({
-    name: `${funder} — ${focus} Grant`,
-    deadline: deadlines[i],
-    amount: amounts[i],
-    eligibility: eligibility[i],
-  }));
+/** Reformat a Grants.gov "MM/DD/YYYY" date as "Aug 9, 2026". @param {string} date */
+function formatDeadline(date) {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(date || '');
+  if (!m) return date || 'Not listed';
+  const month = MONTHS[Number(m[1]) - 1] ?? m[1];
+  return `${month} ${Number(m[2])}, ${m[3]}`;
 }
 
 export const findGrantsTool = tool(
   'find_grants',
-  'Find grant opportunities that match what the nonprofit is looking for. ' +
-    'Use this whenever a user asks about funding, grants, or where to apply for money. ' +
-    'Returns up to 10 matching grants with name, deadline, amount, and eligibility.',
+  'Search real, currently-open U.S. federal grant opportunities from the free Grants.gov API. ' +
+    'Use this whenever a user asks about grants or funding. Extract the search terms from what ' +
+    'the user said and pass them as structured arguments. Note: Grants.gov only lists federal ' +
+    '(nationwide) grants, so it cannot filter by city or state.',
   {
     query: z
       .string()
-      .describe('What the user is looking for, e.g. their mission, cause area, or the kind of funding they need.'),
+      .describe(
+        'The main topic keywords to search, e.g. "youth education". Put only the subject here — not a location or a dollar amount.',
+      ),
+    category: z
+      .string()
+      .optional()
+      .describe(
+        'A funding category if the user named one, e.g. "education", "health", "environment", "arts", "housing".',
+      ),
+    location: z
+      .string()
+      .optional()
+      .describe(
+        'A place the user mentioned, if any. Informational only — Grants.gov lists federal grants nationwide and cannot filter by location.',
+      ),
+    maxAmount: z
+      .number()
+      .optional()
+      .describe('Maximum award amount in US dollars if the user gave one (e.g. 50000 for "under $50k").'),
   },
-  async ({ query }) => {
-    const grants = searchGrants(query);
+  async ({ query, category, location, maxAmount }) => {
+    /**
+     * @param {string} body
+     * @returns {{ content: Array<{ type: 'text', text: string }> }}
+     */
+    const reply = (body) => ({ content: [{ type: 'text', text: body }] });
 
-    const results = grants
-      .map(
-        (g, i) =>
-          `${i + 1}. **${g.name}**\n` +
-          `   • Deadline: ${g.deadline}\n` +
-          `   • Amount: ${g.amount}\n` +
-          `   • Eligibility: ${g.eligibility}`,
-      )
-      .join('\n\n');
+    try {
+      // 1. Server-side search. Apply the category code when we can map it.
+      const code = category ? CATEGORY_CODES[category.trim().toLowerCase()] : undefined;
+      /** @type {Record<string, unknown>} */
+      const body = { keyword: query, oppStatuses: 'posted', rows: 25 };
+      if (code) body.fundingCategories = code;
 
-    const text = `Found ${grants.length} grants matching "${query}":\n\n${results}`;
+      let search = await postJson(SEARCH_URL, body, 12000);
+      if (search?.errorcode !== 0) throw new Error(search?.msg || 'search failed');
 
-    return { content: [{ type: 'text', text }] };
+      /** @type {any[]} */
+      let hits = search?.data?.oppHits ?? [];
+      // If the category filter zeroed out the results, retry without it.
+      if (hits.length === 0 && code) {
+        delete body.fundingCategories;
+        search = await postJson(SEARCH_URL, body, 12000);
+        hits = search?.data?.oppHits ?? [];
+      }
+
+      if (hits.length === 0) {
+        return reply(
+          `I couldn't find any open grants matching "${query}" on Grants.gov right now. Try different or broader keywords.`,
+        );
+      }
+
+      // 2. Enrich the top candidates with award amounts (one detail call each).
+      const candidates = hits.slice(0, 10);
+      const details = await Promise.all(
+        candidates.map((/** @type {any} */ h) =>
+          postJson(DETAIL_URL, { opportunityId: String(h.id) }, 10000).catch(() => null),
+        ),
+      );
+
+      const enriched = candidates.map((h, i) => {
+        const syn = details[i]?.data?.synopsis ?? {};
+        const amount = toAmount(syn.awardCeiling) ?? toAmount(syn.estimatedFunding) ?? toAmount(syn.awardFloor);
+        return {
+          title: cleanTitle(h.title || 'Untitled opportunity'),
+          agency: h.agency || 'Unknown agency',
+          deadline: formatDeadline(h.closeDate),
+          amount,
+          link: `${LISTING_URL}${h.id}`,
+        };
+      });
+
+      // 3. Apply the max-amount filter client-side (the API has no amount filter).
+      // Prefer grants known to be within budget; fall back to unknown-amount ones.
+      let picked = enriched;
+      if (typeof maxAmount === 'number') {
+        const withinBudget = enriched.filter((g) => g.amount != null && g.amount <= maxAmount);
+        const unknown = enriched.filter((g) => g.amount == null);
+        picked = [...withinBudget, ...unknown];
+        if (picked.length === 0) {
+          return reply(
+            `I found open grants for "${query}", but none with a listed award at or under ${formatUsd(maxAmount)}. Want me to show them without the budget limit?`,
+          );
+        }
+      }
+
+      const results = picked.slice(0, 5);
+
+      // 4. Format cleanly. Benvu will present this in the user's language.
+      const lines = results.map((g, i) => {
+        const amount = g.amount != null ? `up to ${formatUsd(g.amount)}` : 'not listed';
+        return `${i + 1}. *${g.title}*\n   Agency: ${g.agency}\n   Award: ${amount} · Closes: ${g.deadline}\n   ${g.link}`;
+      });
+
+      const notes = [];
+      if (typeof maxAmount === 'number')
+        notes.push(`Filtered to awards at or under ${formatUsd(maxAmount)} where an amount was listed.`);
+      if (location) notes.push(`Grants.gov lists federal grants nationwide, so results aren't limited to ${location}.`);
+
+      const header = `Here ${results.length === 1 ? 'is 1 open grant' : `are ${results.length} open grants`} for "${query}" from Grants.gov:`;
+      return reply([header, lines.join('\n\n'), notes.join(' ')].filter(Boolean).join('\n\n'));
+    } catch (_err) {
+      return reply(
+        "I couldn't reach the Grants.gov database just now — it may be temporarily down. Please try again in a few minutes.",
+      );
+    }
   },
 );
