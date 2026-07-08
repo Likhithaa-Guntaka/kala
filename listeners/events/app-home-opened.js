@@ -1,9 +1,9 @@
 import { buildAppHomeView } from '../views/app-home-builder.js';
 
 const SUGGESTED_PROMPTS = [
-  { title: 'Reset Password', message: 'I need to reset my password' },
-  { title: 'Request Access', message: 'I need access to a system or tool' },
-  { title: 'Network Issues', message: "I'm having network connectivity issues" },
+  { title: 'Find Grants', message: 'Find grants for youth education in New York under $50k' },
+  { title: 'Draft a Report', message: 'Draft an impact report, we served 300 families this quarter' },
+  { title: 'Track a Deadline', message: 'Remind me about the Ford Foundation grant deadline on August 15' },
 ];
 
 /**

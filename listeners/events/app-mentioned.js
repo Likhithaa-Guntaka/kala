@@ -1,9 +1,9 @@
-import { runCaseyAgent } from '../../agent/index.js';
+import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
 /**
- * Handle app_mention events and run the Casey agent.
+ * Handle app_mention events and run the Benvu agent.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'app_mention'>} args
  * @returns {Promise<void>}
  */
@@ -19,7 +19,7 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
 
     if (!cleanedText) {
       await say({
-        text: "Hey there! How can I help you? Describe your IT issue and I'll do my best to assist.",
+        text: "Hi! I'm Benvu. Tell me what you need, in any language, and I'll help you find grants, draft reports, or track deadlines.",
         thread_ts: threadTs,
       });
       return;
@@ -51,7 +51,7 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
 
     // Run the agent with deps for tool access
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
-    const { responseText, sessionId: newSessionId } = await runCaseyAgent(
+    const { responseText, sessionId: newSessionId } = await runBenvuAgent(
       cleanedText,
       existingSessionId ?? undefined,
       deps,

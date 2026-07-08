@@ -1,4 +1,4 @@
-import { runCaseyAgent } from '../../agent/index.js';
+import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
@@ -24,7 +24,7 @@ function getIssueMetadata(event) {
 }
 
 /**
- * Handle messages sent to Casey via DM or in threads the bot is part of.
+ * Handle messages sent to Benvu via DM or in threads the bot is part of.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'message'>} args
  * @returns {Promise<void>}
  */
@@ -88,7 +88,7 @@ export async function handleMessage({ client, context, event, logger, say, saySt
 
     // Run the agent with deps for tool access
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
-    const { responseText, sessionId: newSessionId } = await runCaseyAgent(text, existingSessionId ?? undefined, deps);
+    const { responseText, sessionId: newSessionId } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
 
     // Stream response in thread with feedback buttons
     const streamer = sayStream();

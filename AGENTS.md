@@ -1,6 +1,6 @@
 # AGENTS.md - claude-agent-sdk
 
-JavaScript implementation of Casey using the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) (`@anthropic-ai/claude-agent-sdk`).
+JavaScript implementation of Benvu — a nonprofit assistant agent that helps staff find grants, draft impact reports, and track deadlines, and replies in the user's own language — built with the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) (`@anthropic-ai/claude-agent-sdk`).
 
 See the [root AGENTS.md](../AGENTS.md) for monorepo-wide architecture and shared patterns.
 
@@ -62,7 +62,7 @@ npm test             # Run all tests
 
 ### Agent Layer
 
-The agent is defined in `agent/casey.js` using the Claude Agent SDK:
+The agent is defined in `agent/benvu.js` using the Claude Agent SDK:
 
 - `query({ prompt, options })` returns an async generator of messages
 - Tools are defined with `tool()` from the SDK using Zod v4 schemas
@@ -70,6 +70,7 @@ The agent is defined in `agent/casey.js` using the Claude Agent SDK:
 - Tools return MCP `CallToolResult` format: `{ content: [{ type: 'text', text }] }`
 - `permissionMode: 'bypassPermissions'` since all tools are safe
 - Model: `claude-sonnet-4-20250514`
+- The system prompt instructs Benvu to detect the user's language and respond in it
 
 ### Conversation Management
 
@@ -79,9 +80,15 @@ The store uses a `Map` keyed by `${channelId}:${threadTs}` with TTL-based cleanu
 
 ### Dependency Injection
 
-`runCaseyAgent(text, sessionId, deps)` accepts an optional `deps` object with `{ client, userId, channelId, threadTs, messageTs, userToken }`. Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runCaseyAgent()` that capture the `deps` parameter. Static tools (knowledge base, tickets, etc.) remain as module-level exports in `agent/tools/`.
+`runBenvuAgent(text, sessionId, deps)` accepts an optional `deps` object with `{ client, userId, channelId, threadTs, messageTs, userToken }`. Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runBenvuAgent()` that capture the `deps` parameter. Static tools (grant finder, report drafter, deadline reminder) remain as module-level exports in `agent/tools/`.
 
 ### Tool Definitions
+
+`agent/tools/` contains three nonprofit assistant tools (all return simulated data):
+
+- `grant-finder.js` — `find_grants(query)` returns up to 10 grants with name, deadline, amount, and eligibility.
+- `report-drafter.js` — `draft_impact_report(impact)` expands a one-line impact description into a full report draft.
+- `deadline-reminder.js` — `remind_deadline(grant_name, deadline)` returns a formatted deadline reminder message.
 
 Tools in `agent/tools/` are defined using `tool()` from the Claude Agent SDK:
 

@@ -8,29 +8,19 @@
 /** @type {Category[]} */
 export const CATEGORIES = [
   {
-    actionId: 'category_password_reset',
-    text: ':closed_lock_with_key: Password Reset',
-    value: 'Password Reset',
+    actionId: 'category_find_grants',
+    text: ':moneybag: Find Grants',
+    value: 'Find Grants',
   },
   {
-    actionId: 'category_access_request',
-    text: ':key: Access Request',
-    value: 'Access Request',
+    actionId: 'category_draft_report',
+    text: ':memo: Draft a Report',
+    value: 'Draft a Report',
   },
   {
-    actionId: 'category_software_help',
-    text: ':computer: Software Help',
-    value: 'Software Help',
-  },
-  {
-    actionId: 'category_network_issues',
-    text: ':globe_with_meridians: Network Issues',
-    value: 'Network Issues',
-  },
-  {
-    actionId: 'category_something_else',
-    text: ':speech_balloon: Something Else',
-    value: 'Something Else',
+    actionId: 'category_track_deadline',
+    text: ':alarm_clock: Track a Deadline',
+    value: 'Track a Deadline',
   },
 ];
 
@@ -48,7 +38,7 @@ export function buildAppHomeView(installUrl = null, isConnected = false, botUser
       type: 'header',
       text: {
         type: 'plain_text',
-        text: "Hey there :wave: I'm your IT support agent.",
+        text: "Hi, I'm Benvu :wave:",
       },
     },
     {
@@ -56,9 +46,9 @@ export function buildAppHomeView(installUrl = null, isConnected = false, botUser
       text: {
         type: 'mrkdwn',
         text:
-          'I can help you troubleshoot technical issues, reset passwords, ' +
-          'check system status, and create support tickets.\n\n' +
-          '*Choose a category below to get started*, or send me a direct message anytime.',
+          'I help nonprofit teams find grants, draft reports, and track deadlines. ' +
+          'Just type what you need in any language.\n\n' +
+          '*Choose an option below to get started*, or send me a direct message anytime.',
       },
     },
     { type: 'divider' },

@@ -11,7 +11,7 @@ describe('handleIssueButton', () => {
 
   beforeEach(() => {
     fakeAck = mock.fn(async () => {});
-    fakeBody = { actions: [{ value: 'Password Reset' }], trigger_id: 'T123' };
+    fakeBody = { actions: [{ value: 'Find Grants' }], trigger_id: 'T123' };
     fakeClient = { views: { open: mock.fn(async () => ({ ok: true })) } };
     fakeLogger = { error: mock.fn() };
   });
@@ -33,7 +33,7 @@ describe('handleIssueButton', () => {
     await handleIssueButton({ ack: fakeAck, body: fakeBody, client: fakeClient, logger: fakeLogger });
     const callArgs = fakeClient.views.open.mock.calls[0].arguments[0];
     const categoryBlock = callArgs.view.blocks.find((b) => b.block_id === 'category_block');
-    assert.strictEqual(categoryBlock.element.initial_option.value, 'Password Reset');
+    assert.strictEqual(categoryBlock.element.initial_option.value, 'Find Grants');
   });
 
   it('logs error when views.open fails', async () => {

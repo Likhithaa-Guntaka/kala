@@ -22,9 +22,9 @@ describe('buildIssueModal', () => {
   });
 
   it('pre-selects the given category', () => {
-    const modal = buildIssueModal('Access Request');
+    const modal = buildIssueModal('Draft a Report');
     const categoryBlock = modal.blocks.find((b) => b.block_id === 'category_block');
-    assert.strictEqual(categoryBlock.element.initial_option.value, 'Access Request');
+    assert.strictEqual(categoryBlock.element.initial_option.value, 'Draft a Report');
   });
 
   it('defaults to first category when unknown category is given', () => {

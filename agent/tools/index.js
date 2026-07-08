@@ -1,5 +1,3 @@
-export { searchKnowledgeBaseTool } from './knowledge-base.js';
-export { triggerPasswordResetTool } from './password-reset.js';
-export { checkSystemStatusTool } from './system-status.js';
-export { createSupportTicketTool } from './ticket.js';
-export { lookupUserPermissionsTool } from './user-permissions.js';
+export { remindDeadlineTool } from './deadline-reminder.js';
+export { findGrantsTool } from './grant-finder.js';
+export { draftImpactReportTool } from './report-drafter.js';

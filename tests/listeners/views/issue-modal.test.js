@@ -16,8 +16,8 @@ describe('handleIssueSubmission', () => {
       view: {
         state: {
           values: {
-            category_block: { category_select: { selected_option: { value: 'Network Issues' } } },
-            description_block: { description_input: { value: 'WiFi keeps dropping' } },
+            category_block: { category_select: { selected_option: { value: 'Find Grants' } } },
+            description_block: { description_input: { value: 'Grants for youth education under $50k' } },
           },
         },
       },
@@ -65,8 +65,8 @@ describe('handleIssueSubmission', () => {
     assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
     const callArgs = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
     assert.strictEqual(callArgs.channel, 'D123');
-    assert.ok(callArgs.text.includes('Network Issues'));
-    assert.ok(callArgs.text.includes('WiFi keeps dropping'));
+    assert.ok(callArgs.text.includes('Find Grants'));
+    assert.ok(callArgs.text.includes('Grants for youth education under $50k'));
     assert.strictEqual(callArgs.metadata.event_type, 'issue_submission');
   });
 

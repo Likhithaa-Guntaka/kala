@@ -1,31 +1,31 @@
-# Casey: IT Support Agent (Bolt for JavaScript and Claude Agent SDK)
+# Benvu: Nonprofit Assistant Agent (Bolt for JavaScript and Claude Agent SDK)
 
-Meet Casey (it/this/that) — an AI-powered IT support agent that lives in Slack. Casey can troubleshoot common issues, search knowledge base articles, reset passwords, check system status, and create support tickets, all without leaving the conversation.
+Meet Benvu — an AI-powered assistant for nonprofit teams that lives in Slack. Benvu helps staff find grants, draft impact reports, and track deadlines, and it replies in whatever language you write in, all without leaving the conversation.
 
 Built with [Bolt for JavaScript](https://tools.slack.dev/bolt-js/) and the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) using models from [Anthropic](https://www.anthropic.com).
 
 ## App Overview
 
-Casey gives your team instant IT support through four entry points:
+Benvu gives your team instant help through four entry points:
 
-* **App Home** — Users open Casey's Home tab and choose from common issue categories (Password Reset, Access Request, Software Help, Network Issues, Something Else). A modal collects details, then Casey starts a DM thread with a resolution.
-* **Direct Messages** — Users message Casey directly to describe any IT issue. Casey responds in-thread, maintaining context across follow-ups.
-* **Channel @mentions** — Users mention `@Casey` in any channel to get help without leaving the conversation.
-* **Assistant Panel** — Users click _Add Agent_ in Slack, select Casey, and pick from suggested prompts or describe an issue.
+* **App Home** — Users open Benvu's Home tab and choose from three quick actions (Find Grants, Draft a Report, Track a Deadline), or just describe what they need. Benvu starts a DM thread and responds.
+* **Direct Messages** — Users message Benvu directly to describe what they need. Benvu responds in-thread, maintaining context across follow-ups.
+* **Channel @mentions** — Users mention `@Benvu` in any channel to get help without leaving the conversation.
+* **Assistant Panel** — Users click _Add Agent_ in Slack, select Benvu, and pick from suggested prompts or describe a need.
 
-Casey uses five simulated tools to assist users:
+Benvu detects the language each user writes in and replies in that same language.
 
-* **Knowledge Base Search** — Finds relevant articles for common topics like VPN, email, Wi-Fi, printers, and more.
-* **Support Ticket Creation** — Creates a tracked ticket when issues need human follow-up.
-* **Password Reset** — Triggers a password reset and confirms the action.
-* **System Status Check** — Reports the operational status of company systems.
-* **User Permissions Lookup** — Shows access levels and group memberships.
+Benvu uses three simulated tools to assist users:
 
-> **Note:** All tools return simulated data for demonstration purposes. In a production app, these would connect to your actual IT systems.
+* **Find Grants** — Searches for grant opportunities and returns matches with name, deadline, amount, and eligibility.
+* **Draft a Report** — Turns a one-line description of impact into a full, ready-to-use impact report draft.
+* **Track a Deadline** — Creates a friendly, formatted reminder for a grant deadline.
+
+> **Note:** All tools return simulated data for demonstration purposes. In a production app, these would connect to real grant databases and reminder systems.
 
 ### Slack MCP Server
 
-Casey also works with the [Slack MCP Server](https://docs.slack.dev/ai/slack-mcp-server), giving it the ability to search messages and files, read channel history and threads, send messages, schedule messages, and create or update Slack canvases. When deployed with OAuth (HTTP mode), Casey automatically connects to the Slack MCP Server using the user's token, unlocking these capabilities on top of the built-in IT tools.
+Benvu also works with the [Slack MCP Server](https://docs.slack.dev/ai/slack-mcp-server), giving it the ability to search messages and files, read channel history and threads, send messages, schedule messages, and create or update Slack canvases. When deployed with OAuth (HTTP mode), Benvu automatically connects to the Slack MCP Server using the user's token, unlocking these capabilities on top of the built-in tools.
 
 ## Setup
 
@@ -53,8 +53,8 @@ slack login
 #### Initializing the project
 
 ```sh
-slack create my-casey-agent --template slack-samples/bolt-js-support-agent --subdir claude-agent-sdk
-cd my-casey-agent
+slack create my-benvu-agent --template slack-samples/bolt-js-support-agent --subdir claude-agent-sdk
+cd my-benvu-agent
 ```
 
 </details>
@@ -89,8 +89,8 @@ SLACK_APP_TOKEN=YOUR_SLACK_APP_TOKEN
 #### Initializing the project
 
 ```sh
-git clone https://github.com/slack-samples/bolt-js-support-agent.git my-casey-agent
-cd my-casey-agent/claude-agent-sdk
+git clone https://github.com/slack-samples/bolt-js-support-agent.git my-benvu-agent
+cd my-benvu-agent/claude-agent-sdk
 ```
 
 </details>
@@ -230,17 +230,17 @@ node app-oauth.js
 
 ### Using the App
 
-Once Casey is running, there are several ways to interact:
+Once Benvu is running, there are several ways to interact:
 
-**App Home** — Open Casey in Slack and click the _Home_ tab. You'll see five category buttons. Click one to open a modal, describe your issue, and submit. Casey will start a DM thread with you containing a diagnosis and next steps.
+**App Home** — Open Benvu in Slack and click the _Home_ tab. You'll see three quick-action buttons (_Find Grants_, _Draft a Report_, _Track a Deadline_). Click one to get started, or just describe what you need. Benvu will start a DM thread with you.
 
-**Direct Messages** — Open a DM with Casey. You'll see suggested prompts like _Reset Password_, _Request Access_, and _Network Issues_ — pick one or describe your own issue. Casey will react with :eyes: while processing, then reply in a thread. Send follow-up messages in the same thread and Casey will maintain the full conversation context.
+**Direct Messages** — Open a DM with Benvu. You'll see suggested prompts like _Find Grants_, _Draft a Report_, and _Track a Deadline_ — pick one or describe your own need in any language. Benvu will react with :eyes: while processing, then reply in a thread. Send follow-up messages in the same thread and Benvu will maintain the full conversation context.
 
-**Channel @mentions** — Invite Casey to a channel by typing `/invite @Casey` in the message box, then type `@Casey` followed by your issue. Casey responds in a thread so the channel stays clean.
+**Channel @mentions** — Invite Benvu to a channel by typing `/invite @Benvu` in the message box, then type `@Benvu` followed by what you need. Benvu responds in a thread so the channel stays clean.
 
-**Assistant Panel** — Click _Add Agent_ in the top-right corner of Slack, select Casey from the list, then pick a suggested prompt or type a message.
+**Assistant Panel** — Click _Add Agent_ in the top-right corner of Slack, select Benvu from the list, then pick a suggested prompt or type a message.
 
-Casey will add a :white_check_mark: reaction when it believes an issue has been resolved, and occasionally adds a contextual emoji reaction to keep things friendly.
+Benvu will add a :white_check_mark: reaction when it believes a request has been handled, and occasionally adds a contextual emoji reaction to keep things friendly.
 
 ### Linting
 
@@ -280,13 +280,13 @@ Every incoming request is routed to a "listener". This directory groups each lis
 **`/listeners/events`** — Handles incoming events:
 
 * `app-home-opened.js` — Publishes the App Home view with category buttons, or pins suggested prompts to the agent DM Messages tab (branches on `event.tab`).
-* `app-mentioned.js` — Responds to `@Casey` mentions in channels.
+* `app-mentioned.js` — Responds to `@Benvu` mentions in channels.
 * `message.js` — Responds to direct messages from users.
 
 **`/listeners/actions`** — Handles interactive components:
 
 * `issue-buttons.js` — Opens the issue submission modal when a category button is clicked.
-* `feedback-buttons.js` — Handles thumbs up/down feedback on Casey's responses.
+* `feedback-buttons.js` — Handles thumbs up/down feedback on Benvu's responses.
 
 **`/listeners/views`** — Handles view submissions and builds Block Kit views:
 
@@ -297,11 +297,11 @@ Every incoming request is routed to a "listener". This directory groups each lis
 
 ### `/agent`
 
-The `casey.js` file configures the Claude Agent SDK agent with a system prompt, tools registered via an in-process MCP server, and a `runCaseyAgent()` function that handles sending queries and collecting responses.
+The `benvu.js` file configures the Claude Agent SDK agent with a system prompt, tools registered via an in-process MCP server, and a `runBenvuAgent()` function that handles sending queries and collecting responses.
 
-Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runCaseyAgent()` that capture the dependencies. Static tools (knowledge base, tickets, etc.) remain as module-level exports in `agent/tools/`.
+Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runBenvuAgent()` that capture the dependencies. Static tools (grant finder, report drafter, deadline reminder) remain as module-level exports in `agent/tools/`.
 
-The `tools` directory contains five IT support tools defined using `tool()` from the Claude Agent SDK with Zod v4 schemas.
+The `tools` directory contains three nonprofit assistant tools defined using `tool()` from the Claude Agent SDK with Zod v4 schemas.
 
 ### `/thread-context`
 
