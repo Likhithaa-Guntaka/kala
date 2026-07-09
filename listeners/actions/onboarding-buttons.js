@@ -3,6 +3,7 @@ import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAppHomeView } from '../views/app-home-builder.js';
+import { buildResponseBlocks } from '../views/feedback-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 
 /**
@@ -32,7 +33,21 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
     const org = getOrgTypeById(orgTypeId);
     if (!org) return;
 
+    // Durable persistence (survives restarts) is handled by the disk-backed store.
     sessionStore.setOrgType(userId, org.id);
+
+    // Best-effort: also mirror the choice into the user's Slack profile custom field
+    // "benvu_org_type". Bots generally can't write other users' profile fields (and
+    // custom fields need an admin-defined field ID), so this is expected to no-op in
+    // most workspaces — the disk store above is the source of truth.
+    try {
+      await client.users.profile.set({
+        user: userId,
+        profile: { fields: { benvu_org_type: { value: org.id, alt: '' } } },
+      });
+    } catch {
+      // Not supported for this user/workspace — durable persistence already handled on disk.
+    }
 
     // Follow-up DM with three tailored example prompts as native buttons.
     const conversation = await client.conversations.open({ users: userId });
@@ -113,9 +128,14 @@ export async function handlePromptButton({ ack, body, client, context, logger })
 
     const { responseText, sessionId } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
 
-    // Clear the status, then post the answer.
+    // Clear the status, then post the answer with feedback buttons.
     await setAssistantStatus(client, channelId, threadTs, '');
-    await client.chat.postMessage({ channel: channelId, thread_ts: threadTs, text: responseText });
+    await client.chat.postMessage({
+      channel: channelId,
+      thread_ts: threadTs,
+      text: responseText,
+      blocks: buildResponseBlocks(responseText),
+    });
 
     if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);
   } catch (e) {

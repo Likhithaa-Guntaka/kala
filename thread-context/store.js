@@ -11,8 +11,10 @@ export class SessionStore {
   /**
    * @param {number} [ttlSeconds=86400]
    * @param {number} [maxEntries=1000]
+   * @param {(() => void) | null} [onOrgTypeChange] - Called after any org-type write,
+   *   so a caller can persist the org types (e.g. to disk).
    */
-  constructor(ttlSeconds = 86400, maxEntries = 1000) {
+  constructor(ttlSeconds = 86400, maxEntries = 1000, onOrgTypeChange = null) {
     /** @type {Map<string, StoreEntry>} */
     this._store = new Map();
     /**
@@ -26,6 +28,32 @@ export class SessionStore {
     this._ttlSeconds = ttlSeconds;
     /** @private @type {number} */
     this._maxEntries = maxEntries;
+    /** @private @type {(() => void) | null} */
+    this._onOrgTypeChange = onOrgTypeChange;
+  }
+
+  /**
+   * Export org types as a plain { userId: orgType } object (for persistence).
+   * @returns {Record<string, string>}
+   */
+  exportOrgTypes() {
+    /** @type {Record<string, string>} */
+    const out = {};
+    for (const [userId, entry] of this._orgTypes) out[userId] = entry.orgType;
+    return out;
+  }
+
+  /**
+   * Seed org types from a persisted { userId: orgType } object without triggering
+   * the change callback (used to hydrate on startup).
+   * @param {Record<string, string>} map
+   * @returns {void}
+   */
+  importOrgTypes(map) {
+    const now = Date.now();
+    for (const [userId, orgType] of Object.entries(map || {})) {
+      this._orgTypes.set(userId, { orgType, timestamp: now });
+    }
   }
 
   /**
@@ -51,6 +79,7 @@ export class SessionStore {
         this._orgTypes.delete(key);
       }
     }
+    this._onOrgTypeChange?.();
   }
 
   /**
@@ -60,6 +89,7 @@ export class SessionStore {
    */
   clearOrgType(userId) {
     this._orgTypes.delete(userId);
+    this._onOrgTypeChange?.();
   }
 
   /**

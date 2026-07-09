@@ -69,7 +69,15 @@ draft reports, track deadlines, and communicate — all through Slack.
    - "create_volunteer_announcement" — want to recruit volunteers for an event or shift
    - "summarize_meeting" — pasted meeting notes to summarize or turn into action items
    - "remind_deadline" — want a reminder for a grant deadline
+   - "post_to_channel" — the user has confirmed they want something posted to a specific channel
 3. Present the tool's result simply, in the user's language, keeping its formatting, and offer a next step
+
+## POSTING TO A CHANNEL
+- After you create a volunteer announcement, ask: "Want me to post this to a channel? Just reply with the channel name."
+- When the user names a channel, Slack shows it as a <#C0123456|name> link. Call "post_to_channel"
+  with that channel ID and the exact announcement text you drafted, then confirm where you posted it.
+- If the user gives a bare name without the # picker (no <#...> link), ask them to pick it from the # menu
+  so you get a valid channel link. Never guess a channel ID.
 
 ## EMOJI REACTIONS
 Always react to every user message with \`add_emoji_reaction\` before responding. \
@@ -129,6 +137,7 @@ const ALLOWED_TOOLS = [
   'draft_impact_report',
   'find_grants',
   'mark_resolved',
+  'post_to_channel',
   'remind_deadline',
   'summarize_meeting',
 ];
@@ -162,8 +171,8 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       emoji_name: z.string().describe("The Slack emoji name without colons (e.g. 'memo', 'seedling', 'alarm_clock')."),
     },
     async ({ emoji_name }) => {
-      if (!deps) {
-        return { content: [{ type: 'text', text: 'No deps available to add reaction.' }] };
+      if (!deps?.messageTs) {
+        return { content: [{ type: 'text', text: 'No message to react to here.' }] };
       }
 
       // Skip ~15% of reactions to feel more natural
@@ -195,8 +204,8 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       'Call this once when the request is fully handled — e.g. grants shared, report drafted, reminder set.',
     {},
     async () => {
-      if (!deps) {
-        return { content: [{ type: 'text', text: 'No deps available to mark resolved.' }] };
+      if (!deps?.threadTs) {
+        return { content: [{ type: 'text', text: 'No thread to mark resolved here.' }] };
       }
 
       try {
@@ -213,6 +222,43 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     },
   );
 
+  const postToChannelTool = tool(
+    'post_to_channel',
+    'Post a message (such as a volunteer announcement) to a Slack channel. Use this ONLY after the ' +
+      'user has confirmed and named a channel. When a user types a channel like #general, Slack turns it ' +
+      'into a <#C0123456|general> link — pass that channel ID as `channel`, and the full message as `message`.',
+    {
+      channel: z
+        .string()
+        .describe('The target channel ID (e.g. "C0123456"), taken from the <#C...|name> link the user typed.'),
+      message: z.string().describe('The full message text to post to the channel.'),
+    },
+    async ({ channel, message }) => {
+      if (!deps) {
+        return { content: [{ type: 'text', text: 'No deps available to post.' }] };
+      }
+      // Accept a raw <#C123|name> link, a #name, or a bare id — extract the id.
+      const channelId = channel.replace(/^<#/, '').replace(/>$/, '').split('|')[0].replace(/^#/, '');
+      try {
+        await deps.client.chat.postMessage({ channel: channelId, text: message });
+        return { content: [{ type: 'text', text: `Posted the message to <#${channelId}>.` }] };
+      } catch (e) {
+        const err = /** @type {any} */ (e);
+        return {
+          content: [
+            {
+              type: 'text',
+              text:
+                `Could not post to that channel (${err.data?.error || err.message}). ` +
+                'Ask the user to pick the channel using the # menu so you get a valid channel link, ' +
+                'and note I can only post to channels I have access to.',
+            },
+          ],
+        };
+      }
+    },
+  );
+
   const benvuToolsServer = createSdkMcpServer({
     name: 'benvu-tools',
     version: '1.0.0',
@@ -223,6 +269,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       draftImpactReportTool,
       findGrantsTool,
       markResolvedTool,
+      postToChannelTool,
       remindDeadlineTool,
       summarizeMeetingTool,
     ],

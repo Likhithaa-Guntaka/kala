@@ -9,7 +9,7 @@ import { handleChangeOrgType, handleOrgTypeSelected, handlePromptButton } from '
  */
 export function register(app) {
   app.action(/^category_/, handleIssueButton);
-  app.action('feedback', handleFeedbackButton);
+  app.action(/^feedback_/, handleFeedbackButton);
   app.action(/^orgtype_/, handleOrgTypeSelected);
   app.action('change_org_type', handleChangeOrgType);
   app.action(/^prompt_run_/, handlePromptButton);

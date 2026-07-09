@@ -34,7 +34,7 @@ export const createVolunteerAnnouncementTool = tool(
       `${signUp}\n\n` +
       'Every shift makes a real difference. Thank you! 💛';
 
-    const text = `${announcement}\n\n---\nWant me to post this to a channel, or tweak the tone or details first?`;
+    const text = `${announcement}\n\n---\nWant me to post this to a channel? Just reply with the channel name (like #general), or ask me to tweak it first.`;
 
     return { content: [{ type: 'text', text }] };
   },

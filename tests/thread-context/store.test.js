@@ -78,5 +78,27 @@ describe('SessionStore', () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
       assert.strictEqual(shortStore.getOrgType('U1'), 'education');
     });
+
+    it('exports and re-imports org types (persistence round-trip)', () => {
+      store.setOrgType('U1', 'education');
+      store.setOrgType('U2', 'food_bank');
+      const snapshot = store.exportOrgTypes();
+      assert.deepStrictEqual(snapshot, { U1: 'education', U2: 'food_bank' });
+
+      const fresh = new SessionStore();
+      fresh.importOrgTypes(snapshot);
+      assert.strictEqual(fresh.getOrgType('U1'), 'education');
+      assert.strictEqual(fresh.getOrgType('U2'), 'food_bank');
+    });
+
+    it('invokes the change callback on set and clear', () => {
+      let calls = 0;
+      const s = new SessionStore(86400, 1000, () => {
+        calls++;
+      });
+      s.setOrgType('U1', 'general');
+      s.clearOrgType('U1');
+      assert.strictEqual(calls, 2);
+    });
   });
 });

@@ -15,7 +15,43 @@
     "bot_user": {
       "display_name": "benvu",
       "always_online": true
-    }
+    },
+    "slash_commands": [
+      {
+        "command": "/grant",
+        "description": "Find grant opportunities",
+        "usage_hint": "[what you are looking for]",
+        "should_escape": false
+      },
+      {
+        "command": "/report",
+        "description": "Draft an impact report",
+        "usage_hint": "[what you accomplished]",
+        "should_escape": false
+      },
+      {
+        "command": "/deadline",
+        "description": "Set a grant deadline reminder",
+        "usage_hint": "[grant name] [deadline]",
+        "should_escape": false
+      },
+      {
+        "command": "/announce",
+        "description": "Create a volunteer announcement",
+        "usage_hint": "[event details]",
+        "should_escape": false
+      },
+      {
+        "command": "/benvu",
+        "description": "Show Benvu help and commands",
+        "should_escape": false
+      },
+      {
+        "command": "/benvu-feedback",
+        "description": "Admin: view a summary of feedback ratings",
+        "should_escape": false
+      }
+    ]
   },
   "oauth_config": {
     "redirect_urls": ["https://ngrok-free.app/slack/oauth_redirect"],
@@ -43,6 +79,8 @@
         "app_mentions:read",
         "channels:history",
         "chat:write",
+        "chat:write.public",
+        "commands",
         "groups:history",
         "im:history",
         "im:read",
@@ -50,6 +88,7 @@
         "reactions:write",
         "reactions:read",
         "users:read",
+        "users.profile:read",
         "assistant:write"
       ]
     }
