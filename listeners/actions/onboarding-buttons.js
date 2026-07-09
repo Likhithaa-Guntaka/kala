@@ -5,23 +5,14 @@ import { buildAppHomeView } from '../views/app-home-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 
 /**
- * Recompute the App Home MCP context and re-publish the personalized view.
+ * Re-publish the App Home view for a user (reflects their current org type).
  * @param {import('@slack/web-api').WebClient} client
  * @param {any} context
  * @param {string} userId
  */
 async function refreshAppHome(client, context, userId) {
-  let installUrl = null;
-  let isConnected = false;
-  if (process.env.SLACK_CLIENT_ID) {
-    if (context.userToken) {
-      isConnected = true;
-    } else if (process.env.SLACK_REDIRECT_URI) {
-      installUrl = `${new URL(process.env.SLACK_REDIRECT_URI).origin}/slack/install`;
-    }
-  }
   const orgType = sessionStore.getOrgType(userId);
-  const view = buildAppHomeView(installUrl, isConnected, context.botUserId, orgType);
+  const view = buildAppHomeView(context.botUserId, orgType);
   await client.views.publish({ user_id: userId, view });
 }
 
@@ -104,7 +95,12 @@ export async function handlePromptButton({ ack, body, client, context, logger })
     const echo = await client.chat.postMessage({ channel: channelId, text: `*You:* ${prompt}` });
     const threadTs = /** @type {string} */ (echo.ts);
 
-    await client.reactions.add({ channel: channelId, timestamp: threadTs, name: 'eyes' }).catch(() => {});
+    // Immediately show a loading message so the click feels responsive.
+    const loading = await client.chat.postMessage({
+      channel: channelId,
+      thread_ts: threadTs,
+      text: 'Got it, working on that… 🤔',
+    });
 
     const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
@@ -119,6 +115,11 @@ export async function handlePromptButton({ ack, body, client, context, logger })
     };
 
     const { responseText, sessionId } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
+
+    // Replace the loading message with the real answer.
+    if (loading?.ts) {
+      await client.chat.delete({ channel: channelId, ts: /** @type {string} */ (loading.ts) }).catch(() => {});
+    }
     await client.chat.postMessage({ channel: channelId, thread_ts: threadTs, text: responseText });
 
     if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);

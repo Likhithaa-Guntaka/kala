@@ -4,94 +4,94 @@ import { describe, it } from 'node:test';
 import { ORG_TYPES } from '../../../listeners/org-types.js';
 import { buildAppHomeView, CATEGORIES } from '../../../listeners/views/app-home-builder.js';
 
-/** @param {any} view */
-function actionsBlocks(view) {
-  return view.blocks.filter((b) => b.type === 'actions');
+/** @param {any} view @param {string} id */
+function block(view, id) {
+  return view.blocks.find((b) => b.block_id === id);
 }
 
 describe('buildAppHomeView', () => {
   it('returns a home view with blocks', () => {
     const view = buildAppHomeView();
     assert.strictEqual(view.type, 'home');
-    assert.ok(Array.isArray(view.blocks));
     assert.ok(view.blocks.length > 0);
   });
 
-  describe('onboarding state (no org type)', () => {
-    it('shows the org-type question with one button per ORG_TYPES entry', () => {
-      const view = buildAppHomeView();
-      const orgBlock = view.blocks.find((b) => b.block_id === 'org_type_select');
-      assert.ok(orgBlock, 'expected an org_type_select actions block');
-      assert.strictEqual(orgBlock.elements.length, ORG_TYPES.length);
-      for (const el of orgBlock.elements) {
-        assert.ok(el.action_id.startsWith('orgtype_'));
-        assert.ok(typeof el.value === 'string');
-      }
-    });
+  it('has a clean header with no wave emoji', () => {
+    const view = buildAppHomeView();
+    const header = view.blocks.find((b) => b.type === 'header');
+    assert.strictEqual(header.text.text, "Hi, I'm Benvu");
+    assert.ok(!header.text.text.includes('👋'));
+    assert.ok(!header.text.text.includes(':wave:'));
+  });
 
-    it('still offers the quick-action category buttons', () => {
-      const view = buildAppHomeView();
-      const quick = view.blocks.find((b) => b.block_id === 'quick_actions');
-      assert.ok(quick);
+  it('never renders an MCP Server block', () => {
+    const view = buildAppHomeView(null, 'education');
+    const allText = JSON.stringify(view.blocks);
+    assert.ok(!allText.includes('MCP Server'));
+  });
+
+  it('always shows the six quick actions', () => {
+    for (const orgType of [null, 'education']) {
+      const view = buildAppHomeView(null, orgType);
+      const quick = block(view, 'quick_actions');
+      assert.ok(quick, `quick_actions present for orgType=${orgType}`);
       assert.strictEqual(quick.elements.length, CATEGORIES.length);
+      assert.strictEqual(CATEGORIES.length, 6);
+    }
+  });
+
+  it('footer mentions the bot and any-language support', () => {
+    const view = buildAppHomeView('U0BOT');
+    const contexts = view.blocks.filter((b) => b.type === 'context').map((b) => b.elements[0].text);
+    const footer = contexts.find((t) => t.includes('any language'));
+    assert.ok(footer);
+    assert.ok(footer.includes('<@U0BOT>'));
+  });
+
+  describe('onboarding state (no org type)', () => {
+    it('asks the org-type question with two rows of three plain buttons', () => {
+      const view = buildAppHomeView();
+      const row1 = block(view, 'org_type_select_1');
+      const row2 = block(view, 'org_type_select_2');
+      assert.ok(row1 && row2);
+      assert.strictEqual(row1.elements.length, 3);
+      assert.strictEqual(row2.elements.length, 3);
+      assert.strictEqual(row1.elements.length + row2.elements.length, ORG_TYPES.length);
+      for (const el of [...row1.elements, ...row2.elements]) {
+        assert.ok(el.action_id.startsWith('orgtype_'));
+        // plain label only — no emoji baked into the text
+        assert.ok(!/\p{Extended_Pictographic}/u.test(el.text.text));
+      }
     });
   });
 
   describe('personalized state (org type set)', () => {
-    it('shows the org label and tailored prompt buttons', () => {
-      const view = buildAppHomeView(null, false, null, 'education');
-      const edu = ORG_TYPES.find((t) => t.id === 'education');
-      const sectionTexts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-      assert.ok(sectionTexts.some((t) => t.includes(edu.label)));
+    it('shows the org label, tailored prompts, and a change-type button', () => {
+      const view = buildAppHomeView(null, 'food_bank');
+      const contexts = view.blocks.filter((b) => b.type === 'context').map((b) => b.elements[0].text);
+      assert.ok(contexts.some((t) => t.includes('Organization: Food Bank / Basic Needs')));
 
-      const prompts = view.blocks.find((b) => b.block_id === 'tailored_prompts');
+      const prompts = block(view, 'tailored_prompts');
       assert.ok(prompts);
-      assert.strictEqual(prompts.elements.length, edu.prompts.length);
-      for (const el of prompts.elements) {
-        assert.ok(el.action_id.startsWith('prompt_run_'));
-      }
-    });
+      assert.strictEqual(prompts.elements.length, 3);
 
-    it('offers a change-organization-type button', () => {
-      const view = buildAppHomeView(null, false, null, 'education');
-      const change = view.blocks.find((b) => b.block_id === 'change_org');
+      const change = block(view, 'change_org');
       assert.ok(change);
       assert.strictEqual(change.elements[0].action_id, 'change_org_type');
     });
 
     it('does not show the onboarding org-type question', () => {
-      const view = buildAppHomeView(null, false, null, 'education');
-      assert.ok(!view.blocks.find((b) => b.block_id === 'org_type_select'));
+      const view = buildAppHomeView(null, 'food_bank');
+      assert.ok(!block(view, 'org_type_select_1'));
     });
-  });
-
-  describe('MCP status footer', () => {
-    it('shows disconnected with learn-more link by default', () => {
-      const view = buildAppHomeView();
-      const texts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-      const mcp = texts.find((t) => t.includes('MCP Server'));
-      assert.ok(mcp.includes('disconnected'));
-      assert.ok(mcp.includes('Learn how to enable'));
-    });
-
-    it('shows connected status when isConnected is true', () => {
-      const view = buildAppHomeView(null, true);
-      const texts = view.blocks.filter((b) => b.type === 'section').map((b) => b.text.text);
-      assert.ok(texts.some((t) => t.includes('connected')));
-    });
-  });
-
-  it('includes bot mention in context when botUserId is provided', () => {
-    const view = buildAppHomeView(null, false, 'U0BOT');
-    const contextBlock = view.blocks.find((b) => b.type === 'context');
-    assert.ok(contextBlock.elements[0].text.includes('<@U0BOT>'));
   });
 });
 
 describe('CATEGORIES', () => {
-  it('each category has required fields', () => {
+  it('has six quick actions each with required fields', () => {
+    assert.strictEqual(CATEGORIES.length, 6);
     for (const cat of CATEGORIES) {
-      assert.ok(typeof cat.actionId === 'string');
+      assert.ok(typeof cat.actionId === 'string' && cat.actionId.startsWith('category_'));
       assert.ok(typeof cat.text === 'string');
       assert.ok(typeof cat.value === 'string');
     }

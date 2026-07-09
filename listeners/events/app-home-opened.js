@@ -32,21 +32,8 @@ export async function handleAppHomeOpened({ client, event, context, logger }) {
     }
 
     const userId = /** @type {string} */ (context.userId);
-
-    let installUrl = null;
-    let isConnected = false;
-
-    if (process.env.SLACK_CLIENT_ID) {
-      if (context.userToken) {
-        isConnected = true;
-      } else if (process.env.SLACK_REDIRECT_URI) {
-        const base = new URL(process.env.SLACK_REDIRECT_URI);
-        installUrl = `${base.origin}/slack/install`;
-      }
-    }
-
     const orgType = sessionStore.getOrgType(userId);
-    const view = buildAppHomeView(installUrl, isConnected, context.botUserId, orgType);
+    const view = buildAppHomeView(context.botUserId, orgType);
     await client.views.publish({ user_id: userId, view });
   } catch (e) {
     logger.error(`Failed to handle app_home_opened: ${e}`);

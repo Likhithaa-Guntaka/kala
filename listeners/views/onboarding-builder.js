@@ -54,7 +54,7 @@ export function buildWelcomeDmBlocks() {
       text: {
         type: 'mrkdwn',
         text:
-          "Hi! I'm *Benvu* 👋 your AI teammate for nonprofit work — I help you find grants, " +
+          "Hi, I'm *Benvu*, your AI teammate for nonprofit work — I help you find grants, " +
           'draft impact reports, thank donors, announce volunteer shifts, and more.\n\n' +
           'To tailor things to you, *what kind of organization are you?*',
       },
