@@ -15,10 +15,51 @@ export class SessionStore {
   constructor(ttlSeconds = 86400, maxEntries = 1000) {
     /** @type {Map<string, StoreEntry>} */
     this._store = new Map();
+    /**
+     * User-level org-type preferences, keyed by user ID. Unlike sessions, these
+     * are durable (no TTL) since they represent a persistent choice — only bounded
+     * by _maxEntries with oldest-first eviction.
+     * @private @type {Map<string, { orgType: string, timestamp: number }>}
+     */
+    this._orgTypes = new Map();
     /** @private @type {number} */
     this._ttlSeconds = ttlSeconds;
     /** @private @type {number} */
     this._maxEntries = maxEntries;
+  }
+
+  /**
+   * Get a user's stored org type, or null if they haven't chosen one.
+   * @param {string} userId
+   * @returns {string | null}
+   */
+  getOrgType(userId) {
+    return this._orgTypes.get(userId)?.orgType ?? null;
+  }
+
+  /**
+   * Store a user's org type preference.
+   * @param {string} userId
+   * @param {string} orgType
+   * @returns {void}
+   */
+  setOrgType(userId, orgType) {
+    this._orgTypes.set(userId, { orgType, timestamp: Date.now() });
+    if (this._orgTypes.size > this._maxEntries) {
+      const sorted = [...this._orgTypes.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+      for (const [key] of sorted.slice(0, this._orgTypes.size - this._maxEntries)) {
+        this._orgTypes.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Clear a user's org type preference (e.g. to re-run onboarding).
+   * @param {string} userId
+   * @returns {void}
+   */
+  clearOrgType(userId) {
+    this._orgTypes.delete(userId);
   }
 
   /**

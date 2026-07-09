@@ -1,7 +1,14 @@
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
-import { draftImpactReportTool, findGrantsTool, remindDeadlineTool } from './tools/index.js';
+import {
+  createVolunteerAnnouncementTool,
+  draftDonorThankYouTool,
+  draftImpactReportTool,
+  findGrantsTool,
+  remindDeadlineTool,
+  summarizeMeetingTool,
+} from './tools/index.js';
 
 // Authentication.
 // Benvu runs on the Claude Agent SDK, which resolves credentials in this order:
@@ -25,6 +32,9 @@ draft reports, track deadlines, and communicate — all through Slack.
 ## PURPOSE
 - Help nonprofit staff find grants that fit their mission
 - Draft clear, ready-to-use impact reports
+- Write warm donor thank-you messages
+- Create volunteer shift announcements
+- Turn meeting notes into a summary with action items
 - Track and remind them about important deadlines
 - Communicate with them in any language they use
 
@@ -40,19 +50,26 @@ draft reports, track deadlines, and communicate — all through Slack.
 - Keep the wording natural in that language — do not translate word-for-word
 
 ## RESPONSE STYLE
-- Short and clear. Plain text. A few sentences at most
+- Short and clear. A few sentences at most before you get to the point
 - No jargon, no acronyms, no technical terms unless the user uses them first
-- No forms, no menus, no button lists — just talk to the person
-- End with one clear, friendly next step when it helps
-- Use emoji very sparingly — at most one, only to set a warm tone
+- Keep the message compact — aim for at most 5-7 lines before a divider (\`---\`)
+- Use light Slack formatting to make things scannable: *bold* for labels, simple
+  bullet points for lists, and the occasional emoji to set a warm tone. Never use raw HTML
+- When a tool returns a formatted draft (thank-you, announcement, summary, grants),
+  keep its formatting intact rather than flattening it into a paragraph
+- Always end with a natural, specific follow-up offer — e.g. "Want me to post this to a
+  channel?", "Should I set a reminder?", "Want me to personalize it for one donor?"
 
 ## WORKFLOW
 1. Understand what the person needs, and ask a short clarifying question if it is unclear
 2. Use the right tool:
-   - "find_grants" when they are looking for funding or grant opportunities
-   - "draft_impact_report" when they need a report written from a short description of their impact
-   - "remind_deadline" when they want a reminder for a grant deadline
-3. Summarize the tool's result simply, in the user's language, and offer a next step
+   - "find_grants" — looking for funding or grant opportunities
+   - "draft_impact_report" — need a report written from a short description of their impact
+   - "draft_donor_thankyou" — want to thank donors after a gift, campaign, or drive
+   - "create_volunteer_announcement" — want to recruit volunteers for an event or shift
+   - "summarize_meeting" — pasted meeting notes to summarize or turn into action items
+   - "remind_deadline" — want a reminder for a grant deadline
+3. Present the tool's result simply, in the user's language, keeping its formatting, and offer a next step
 
 ## EMOJI REACTIONS
 Always react to every user message with \`add_emoji_reaction\` before responding. \
@@ -71,9 +88,25 @@ Use them proactively (e.g. save a drafted report to a canvas, or schedule a dead
 and whenever the user explicitly asks for a Slack action.
 
 ## BOUNDARIES
-- Stay focused on helping nonprofit staff with grants, reports, deadlines, and communication
+- Stay focused on helping nonprofit staff: grants, reports, donor thank-yous, volunteer
+  announcements, meeting summaries, deadlines, and communication
 - Do not invent grant details, amounts, or deadlines — always use the provided tools
 - If you are unsure what the person needs, ask a short, friendly question first`;
+
+/**
+ * Extra system-prompt context describing the user's organization type, when known,
+ * so Benvu tailors its examples and suggestions.
+ * @param {string} [orgType]
+ * @returns {string}
+ */
+function orgContext(orgType) {
+  if (!orgType) return '';
+  return (
+    `\n\n## THIS USER'S ORGANIZATION\n` +
+    `This person works at a "${orgType}" type of nonprofit. Tailor your examples, tone, ` +
+    'and suggestions to that context when it is relevant, without forcing it.'
+  );
+}
 
 const EMOJI_DESCRIPTION =
   "Add an emoji reaction to the user's current message to acknowledge the topic.\n\n" +
@@ -89,7 +122,16 @@ const EMOJI_DESCRIPTION =
   'Do not use eyes (added automatically) or white_check_mark (reserved for mark_resolved).';
 
 /** @type {string[]} */
-const ALLOWED_TOOLS = ['add_emoji_reaction', 'draft_impact_report', 'find_grants', 'mark_resolved', 'remind_deadline'];
+const ALLOWED_TOOLS = [
+  'add_emoji_reaction',
+  'create_volunteer_announcement',
+  'draft_donor_thankyou',
+  'draft_impact_report',
+  'find_grants',
+  'mark_resolved',
+  'remind_deadline',
+  'summarize_meeting',
+];
 
 const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
 
@@ -101,6 +143,7 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * @property {string} threadTs
  * @property {string} messageTs
  * @property {string} [userToken]
+ * @property {string} [orgType] - The user's org type label, for tailoring responses.
  */
 
 /**
@@ -173,7 +216,16 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
   const benvuToolsServer = createSdkMcpServer({
     name: 'benvu-tools',
     version: '1.0.0',
-    tools: [addEmojiReactionTool, draftImpactReportTool, findGrantsTool, markResolvedTool, remindDeadlineTool],
+    tools: [
+      addEmojiReactionTool,
+      createVolunteerAnnouncementTool,
+      draftDonorThankYouTool,
+      draftImpactReportTool,
+      findGrantsTool,
+      markResolvedTool,
+      remindDeadlineTool,
+      summarizeMeetingTool,
+    ],
   });
 
   /** @type {Record<string, any>} */
@@ -191,7 +243,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
-    systemPrompt: BENVU_SYSTEM_PROMPT,
+    systemPrompt: BENVU_SYSTEM_PROMPT + orgContext(deps?.orgType),
     mcpServers,
     allowedTools,
     permissionMode: 'bypassPermissions',

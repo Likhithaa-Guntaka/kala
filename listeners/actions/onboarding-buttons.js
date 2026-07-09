@@ -1,0 +1,128 @@
+import { runBenvuAgent } from '../../agent/index.js';
+import { sessionStore } from '../../thread-context/index.js';
+import { getOrgTypeById } from '../org-types.js';
+import { buildAppHomeView } from '../views/app-home-builder.js';
+import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
+
+/**
+ * Recompute the App Home MCP context and re-publish the personalized view.
+ * @param {import('@slack/web-api').WebClient} client
+ * @param {any} context
+ * @param {string} userId
+ */
+async function refreshAppHome(client, context, userId) {
+  let installUrl = null;
+  let isConnected = false;
+  if (process.env.SLACK_CLIENT_ID) {
+    if (context.userToken) {
+      isConnected = true;
+    } else if (process.env.SLACK_REDIRECT_URI) {
+      installUrl = `${new URL(process.env.SLACK_REDIRECT_URI).origin}/slack/install`;
+    }
+  }
+  const orgType = sessionStore.getOrgType(userId);
+  const view = buildAppHomeView(installUrl, isConnected, context.botUserId, orgType);
+  await client.views.publish({ user_id: userId, view });
+}
+
+/**
+ * Handle an org-type selection button. Stores the choice, sends a tailored
+ * follow-up DM, and refreshes the App Home tab.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * @returns {Promise<void>}
+ */
+export async function handleOrgTypeSelected({ ack, body, client, context, logger }) {
+  await ack();
+
+  try {
+    const userId = body.user.id;
+    const orgTypeId = body.actions[0].value;
+    const org = getOrgTypeById(orgTypeId);
+    if (!org) return;
+
+    sessionStore.setOrgType(userId, org.id);
+
+    // Follow-up DM with three tailored example prompts as native buttons.
+    const conversation = await client.conversations.open({ users: userId });
+    const channelId = conversation.channel?.id;
+    if (channelId) {
+      await client.chat.postMessage({
+        channel: channelId,
+        text: `You're set up as ${org.emoji} ${org.label}. Here are a few things to try.`,
+        blocks: buildTailoredPromptsDmBlocks(org),
+      });
+    }
+
+    await refreshAppHome(client, context, userId);
+  } catch (e) {
+    logger.error(`Failed to handle org-type selection: ${e}`);
+  }
+}
+
+/**
+ * Handle the "change organization type" button — clears the stored type and
+ * re-renders the App Home onboarding.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * @returns {Promise<void>}
+ */
+export async function handleChangeOrgType({ ack, body, client, context, logger }) {
+  await ack();
+
+  try {
+    const userId = body.user.id;
+    sessionStore.clearOrgType(userId);
+    await refreshAppHome(client, context, userId);
+  } catch (e) {
+    logger.error(`Failed to reset org type: ${e}`);
+  }
+}
+
+/**
+ * Handle a tailored example-prompt button. Runs the agent with that prompt and
+ * replies in a DM, so onboarding suggestions are immediately actionable.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * @returns {Promise<void>}
+ */
+export async function handlePromptButton({ ack, body, client, context, logger }) {
+  await ack();
+
+  try {
+    const userId = body.user.id;
+    const prompt = body.actions[0].value;
+    if (!prompt) return;
+
+    // Prompt buttons live in a DM message, but the same buttons on the App Home
+    // tab have no channel — open a DM in that case.
+    let channelId = /** @type {any} */ (body).channel?.id;
+    if (!channelId) {
+      const conversation = await client.conversations.open({ users: userId });
+      channelId = conversation.channel?.id;
+    }
+    if (!channelId) return;
+
+    // Echo the chosen prompt so the DM reads like a normal conversation turn.
+    const echo = await client.chat.postMessage({ channel: channelId, text: `*You:* ${prompt}` });
+    const threadTs = /** @type {string} */ (echo.ts);
+
+    await client.reactions.add({ channel: channelId, timestamp: threadTs, name: 'eyes' }).catch(() => {});
+
+    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
+    const existingSessionId = sessionStore.getSession(channelId, threadTs);
+    const deps = {
+      client,
+      userId,
+      channelId,
+      threadTs,
+      messageTs: threadTs,
+      userToken: context.userToken,
+      orgType,
+    };
+
+    const { responseText, sessionId } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
+    await client.chat.postMessage({ channel: channelId, thread_ts: threadTs, text: responseText });
+
+    if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);
+  } catch (e) {
+    logger.error(`Failed to run prompt button: ${e}`);
+  }
+}

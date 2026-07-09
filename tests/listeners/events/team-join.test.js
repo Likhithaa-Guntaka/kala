@@ -15,7 +15,7 @@ describe('handleTeamJoin', () => {
     fakeLogger = { error: mock.fn() };
   });
 
-  it('opens a DM with the new member and sends the welcome message', async () => {
+  it('opens a DM and sends the onboarding welcome with org-type buttons', async () => {
     const event = { type: 'team_join', user: { id: 'UNEW' } };
     await handleTeamJoin({ event, client: fakeClient, logger: fakeLogger });
 
@@ -25,10 +25,11 @@ describe('handleTeamJoin', () => {
     assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
     const msg = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
     assert.strictEqual(msg.channel, 'D999');
-    assert.ok(msg.text.includes("I'm Benvu"));
-    assert.ok(msg.text.includes('Find grants'));
-    assert.ok(msg.text.includes('Draft impact reports'));
-    assert.ok(msg.text.includes('Track deadlines'));
+    assert.ok(msg.text.includes("I'm Benvu"), 'has fallback text');
+    assert.ok(Array.isArray(msg.blocks), 'sends Block Kit blocks');
+    const orgBlock = msg.blocks.find((b) => b.block_id === 'org_type_select');
+    assert.ok(orgBlock, 'includes the org-type question buttons');
+    assert.ok(orgBlock.elements.every((el) => el.action_id.startsWith('orgtype_')));
   });
 
   it('skips bot users', async () => {

@@ -1,5 +1,6 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
+import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
 /**
@@ -87,7 +88,8 @@ export async function handleMessage({ client, context, event, logger, say, saySt
     });
 
     // Run the agent with deps for tool access
-    const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken };
+    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
+    const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken, orgType };
     const { responseText, sessionId: newSessionId } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
 
     // Stream response in thread with feedback buttons

@@ -1,3 +1,4 @@
+import { sessionStore } from '../../thread-context/index.js';
 import { buildAppHomeView } from '../views/app-home-builder.js';
 
 const SUGGESTED_PROMPTS = [
@@ -44,7 +45,8 @@ export async function handleAppHomeOpened({ client, event, context, logger }) {
       }
     }
 
-    const view = buildAppHomeView(installUrl, isConnected, context.botUserId);
+    const orgType = sessionStore.getOrgType(userId);
+    const view = buildAppHomeView(installUrl, isConnected, context.botUserId, orgType);
     await client.views.publish({ user_id: userId, view });
   } catch (e) {
     logger.error(`Failed to handle app_home_opened: ${e}`);

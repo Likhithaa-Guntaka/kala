@@ -49,4 +49,34 @@ describe('SessionStore', () => {
     store.setSession('C1', 'T1', 'sid-new');
     assert.strictEqual(store.getSession('C1', 'T1'), 'sid-new');
   });
+
+  describe('org type', () => {
+    it('stores and retrieves a user org type', () => {
+      store.setOrgType('U1', 'education');
+      assert.strictEqual(store.getOrgType('U1'), 'education');
+    });
+
+    it('returns null when no org type is set', () => {
+      assert.strictEqual(store.getOrgType('U404'), null);
+    });
+
+    it('overwrites an existing org type', () => {
+      store.setOrgType('U1', 'food_bank');
+      store.setOrgType('U1', 'arts_culture');
+      assert.strictEqual(store.getOrgType('U1'), 'arts_culture');
+    });
+
+    it('clears an org type', () => {
+      store.setOrgType('U1', 'general');
+      store.clearOrgType('U1');
+      assert.strictEqual(store.getOrgType('U1'), null);
+    });
+
+    it('does not expire org types on TTL (they are durable preferences)', async () => {
+      const shortStore = new SessionStore(0);
+      shortStore.setOrgType('U1', 'education');
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      assert.strictEqual(shortStore.getOrgType('U1'), 'education');
+    });
+  });
 });
