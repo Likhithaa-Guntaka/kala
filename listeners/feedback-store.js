@@ -31,6 +31,30 @@ export function getAllFeedback() {
 }
 
 /**
+ * @typedef {Object} TimingEntry
+ * @property {'grants' | 'report' | 'summary'} tool
+ * @property {number} seconds - Measured response time in seconds.
+ * @property {string} timestamp - ISO 8601.
+ */
+
+/** @type {TimingEntry[]} */
+const timingLog = [];
+
+/**
+ * Record how long a timed response (grant search, report, or summary) took.
+ * @param {TimingEntry} entry
+ * @returns {void}
+ */
+export function recordTiming(entry) {
+  timingLog.push(entry);
+}
+
+/** All recorded timings. @returns {TimingEntry[]} */
+export function getTimings() {
+  return timingLog;
+}
+
+/**
  * Aggregate counts and a few recent entries.
  * @returns {{ total: number, up: number, down: number, positivePct: number, recent: FeedbackEntry[] }}
  */
@@ -51,6 +75,10 @@ export function formatFeedbackSummary() {
   if (total === 0) return '*Benvu feedback*\nNo feedback yet.';
 
   const lines = ['*Benvu feedback summary*', `👍 ${up}   👎 ${down}   •   ${total} total (${positivePct}% positive)`];
+  if (timingLog.length > 0) {
+    const avg = Math.round(timingLog.reduce((sum, t) => sum + t.seconds, 0) / timingLog.length);
+    lines.push(`⏱ ${timingLog.length} timed responses, ~${avg}s average`);
+  }
   if (recent.length > 0) {
     lines.push('', '*Recent:*');
     for (const f of recent) {

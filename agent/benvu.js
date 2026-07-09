@@ -1,6 +1,7 @@
 import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
+import { recordTiming } from '../listeners/feedback-store.js';
 import {
   createVolunteerAnnouncementTool,
   draftDonorThankYouTool,
@@ -59,6 +60,8 @@ draft reports, track deadlines, and communicate — all through Slack.
   keep its formatting intact rather than flattening it into a paragraph
 - Always end with a natural, specific follow-up offer — e.g. "Want me to post this to a
   channel?", "Should I set a reminder?", "Want me to personalize it for one donor?"
+- Do NOT add your own "time saved" or timing line. After grant searches, reports, and
+  meeting summaries, the system automatically appends an accurate one for you.
 
 ## WORKFLOW
 1. Understand what the person needs, and ask a short clarifying question if it is unclear
@@ -114,6 +117,37 @@ function orgContext(orgType) {
     `This person works at a "${orgType}" type of nonprofit. Tailor your examples, tone, ` +
     'and suggestions to that context when it is relevant, without forcing it.'
   );
+}
+
+/**
+ * Build the "time saved" outcome line to append after a grant search, report, or
+ * summary. Uses the real response time, and records the timing in the feedback log.
+ * Returns '' for responses that aren't one of those three.
+ * @param {Set<string>} toolsUsed - Tool names invoked during the run.
+ * @param {number} elapsedMs
+ * @returns {string}
+ */
+function outcomeMetricLine(toolsUsed, elapsedMs) {
+  const names = [...toolsUsed].join(' ');
+  const seconds = Math.max(1, Math.round(elapsedMs / 1000));
+
+  /** @type {'grants' | 'report' | 'summary' | null} */
+  let tool = null;
+  let line = '';
+  if (names.includes('find_grants')) {
+    tool = 'grants';
+    line = `⏱ Found in ~${seconds} seconds. Manual research typically takes 2-3 hours.`;
+  } else if (names.includes('draft_impact_report')) {
+    tool = 'report';
+    line = `⏱ Drafted in ~${seconds} seconds. Writing this manually typically takes 45-60 minutes.`;
+  } else if (names.includes('summarize_meeting')) {
+    tool = 'summary';
+    line = `⏱ Summarized in ~${seconds} seconds. Saves ~15 minutes of note-taking.`;
+  }
+
+  if (!tool) return '';
+  recordTiming({ tool, seconds, timestamp: new Date().toISOString() });
+  return `\n\n${line}`;
 }
 
 const EMOJI_DESCRIPTION =
@@ -299,12 +333,17 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
 
   const responseParts = [];
   let newSessionId = null;
+  /** @type {Set<string>} */
+  const toolsUsed = new Set();
+  const startTime = Date.now();
 
   for await (const message of query({ prompt: text, options })) {
     if (message.type === 'assistant') {
       for (const block of message.message.content) {
         if (block.type === 'text') {
           responseParts.push(block.text);
+        } else if (block.type === 'tool_use') {
+          toolsUsed.add(block.name);
         }
       }
     }
@@ -313,6 +352,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     }
   }
 
-  const responseText = responseParts.join('\n');
+  let responseText = responseParts.join('\n');
+  responseText += outcomeMetricLine(toolsUsed, Date.now() - startTime);
   return { responseText, sessionId: newSessionId };
 }

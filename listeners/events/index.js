@@ -1,6 +1,7 @@
 import { handleAppHomeOpened } from './app-home-opened.js';
 import { handleAppMentioned } from './app-mentioned.js';
 import { handleMessage } from './message.js';
+import { handleReactionAdded } from './reaction-added.js';
 import { handleTeamJoin } from './team-join.js';
 
 /**
@@ -12,5 +13,6 @@ export function register(app) {
   app.event('app_home_opened', handleAppHomeOpened);
   app.event('app_mention', handleAppMentioned);
   app.event('message', handleMessage);
+  app.event('reaction_added', handleReactionAdded);
   app.event('team_join', handleTeamJoin);
 }

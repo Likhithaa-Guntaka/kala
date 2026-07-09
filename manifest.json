@@ -51,6 +51,14 @@
         "description": "Admin: view a summary of feedback ratings",
         "should_escape": false
       }
+    ],
+    "shortcuts": [
+      {
+        "name": "Send to Benvu",
+        "type": "message",
+        "callback_id": "send_to_benvu",
+        "description": "Summarize, find grants, draft a report, or set a reminder from this message"
+      }
     ]
   },
   "oauth_config": {
@@ -96,7 +104,15 @@
   "settings": {
     "event_subscriptions": {
       "request_url": "https://ngrok-free.app/slack/events",
-      "bot_events": ["app_home_opened", "app_mention", "message.channels", "message.groups", "message.im", "team_join"]
+      "bot_events": [
+        "app_home_opened",
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "reaction_added",
+        "team_join"
+      ]
     },
     "interactivity": {
       "is_enabled": true,

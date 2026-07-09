@@ -1,0 +1,66 @@
+import assert from 'node:assert';
+import { beforeEach, describe, it, mock } from 'node:test';
+
+import { handleReactionAdded } from '../../../listeners/events/reaction-added.js';
+
+describe('handleReactionAdded', () => {
+  let client;
+  let context;
+  let logger;
+
+  beforeEach(() => {
+    client = {
+      users: { info: mock.fn(async () => ({ user: { id: 'UHUMAN', is_bot: false } })) },
+      conversations: { history: mock.fn(async () => ({ messages: [{ text: 'quarterly meeting notes' }] })) },
+      chat: { postMessage: mock.fn(async () => ({ ok: true, ts: '1' })) },
+    };
+    context = { botUserId: 'UBENVU' };
+    logger = { error: mock.fn() };
+  });
+
+  const msg = (reaction, user = 'UHUMAN', ts = '100.1') => ({
+    reaction,
+    user,
+    item: { type: 'message', channel: 'C1', ts },
+  });
+
+  it('ignores emojis it does not act on', async () => {
+    await handleReactionAdded({ event: msg('thumbsup', 'UHUMAN', '1.1'), client, context, logger });
+    assert.strictEqual(client.users.info.mock.callCount(), 0);
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
+  });
+
+  it('ignores reactions on non-message items', async () => {
+    const event = { reaction: 'clipboard', user: 'UHUMAN', item: { type: 'file', file: 'F1' } };
+    await handleReactionAdded({ event, client, context, logger });
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
+  });
+
+  it("ignores Benvu's own reactions", async () => {
+    await handleReactionAdded({ event: msg('moneybag', 'UBENVU', '2.1'), client, context, logger });
+    assert.strictEqual(client.users.info.mock.callCount(), 0);
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
+  });
+
+  it('ignores reactions from bot users', async () => {
+    client.users.info = mock.fn(async () => ({ user: { id: 'UBOT', is_bot: true } }));
+    await handleReactionAdded({ event: msg('moneybag', 'UBOTREACT', '3.1'), client, context, logger });
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
+  });
+
+  it('bell asks for the deadline in a thread', async () => {
+    await handleReactionAdded({ event: msg('bell', 'UHUMAN', '4.1'), client, context, logger });
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 1);
+    const arg = client.chat.postMessage.mock.calls[0].arguments[0];
+    assert.strictEqual(arg.channel, 'C1');
+    assert.strictEqual(arg.thread_ts, '4.1');
+    assert.ok(arg.text.includes('deadline'));
+  });
+
+  it('dedupes the same reaction event delivered twice (bell)', async () => {
+    const event = msg('bell', 'UHUMAN', '5.1');
+    await handleReactionAdded({ event, client, context, logger });
+    await handleReactionAdded({ event, client, context, logger });
+    assert.strictEqual(client.chat.postMessage.mock.callCount(), 1);
+  });
+});
