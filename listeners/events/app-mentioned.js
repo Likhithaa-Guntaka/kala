@@ -1,5 +1,6 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
+import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
@@ -8,7 +9,7 @@ import { buildFeedbackBlocks } from '../views/feedback-builder.js';
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'app_mention'>} args
  * @returns {Promise<void>}
  */
-export async function handleAppMentioned({ client, context, event, logger, say, sayStream, setStatus }) {
+export async function handleAppMentioned({ client, context, event, logger, say, sayStream }) {
   try {
     const channelId = event.channel;
     const text = event.text || '';
@@ -35,17 +36,8 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
       });
     }
 
-    // Set assistant thread status with loading messages
-    await setStatus({
-      status: 'Thinking…',
-      loading_messages: [
-        'Teaching the hamsters to type faster…',
-        'Untangling the internet cables…',
-        'Consulting the office goldfish…',
-        'Polishing up the response just for you…',
-        'Convincing the AI to stop overthinking…',
-      ],
-    });
+    // Show a native assistant-thread status while Benvu works.
+    await setAssistantStatus(client, channelId, threadTs, statusForMessage(cleanedText));
 
     // Get conversation session
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
@@ -58,6 +50,9 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
       existingSessionId ?? undefined,
       deps,
     );
+
+    // Clear the status before streaming the reply.
+    await setAssistantStatus(client, channelId, threadTs, '');
 
     // Stream response in thread with feedback buttons
     const streamer = sayStream();

@@ -1,5 +1,6 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
+import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAppHomeView } from '../views/app-home-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
@@ -95,12 +96,8 @@ export async function handlePromptButton({ ack, body, client, context, logger })
     const echo = await client.chat.postMessage({ channel: channelId, text: `*You:* ${prompt}` });
     const threadTs = /** @type {string} */ (echo.ts);
 
-    // Immediately show a loading message so the click feels responsive.
-    const loading = await client.chat.postMessage({
-      channel: channelId,
-      thread_ts: threadTs,
-      text: 'Got it, working on that… 🤔',
-    });
+    // Show a native assistant-thread status while Benvu works.
+    await setAssistantStatus(client, channelId, threadTs, statusForMessage(prompt));
 
     const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
@@ -116,10 +113,8 @@ export async function handlePromptButton({ ack, body, client, context, logger })
 
     const { responseText, sessionId } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
 
-    // Replace the loading message with the real answer.
-    if (loading?.ts) {
-      await client.chat.delete({ channel: channelId, ts: /** @type {string} */ (loading.ts) }).catch(() => {});
-    }
+    // Clear the status, then post the answer.
+    await setAssistantStatus(client, channelId, threadTs, '');
     await client.chat.postMessage({ channel: channelId, thread_ts: threadTs, text: responseText });
 
     if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);

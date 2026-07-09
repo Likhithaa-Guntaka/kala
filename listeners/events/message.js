@@ -1,5 +1,6 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
+import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 
@@ -29,7 +30,7 @@ function getIssueMetadata(event) {
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'message'>} args
  * @returns {Promise<void>}
  */
-export async function handleMessage({ client, context, event, logger, say, sayStream, setStatus }) {
+export async function handleMessage({ client, context, event, logger, say, sayStream }) {
   // Skip message subtypes (edits, deletes, etc.)
   if (!isGenericMessageEvent(event)) return;
 
@@ -75,24 +76,16 @@ export async function handleMessage({ client, context, event, logger, say, saySt
       });
     }
 
-    // Set assistant thread status with loading messages
-    await setStatus({
-      status: 'Thinking…',
-      loading_messages: [
-        'Teaching the hamsters to type faster…',
-        'Untangling the internet cables…',
-        'Consulting the office goldfish…',
-        'Polishing up the response just for you…',
-        'Convincing the AI to stop overthinking…',
-      ],
-    });
+    // Show a native assistant-thread status while Benvu works.
+    await setAssistantStatus(client, channelId, threadTs, statusForMessage(text));
 
     // Run the agent with deps for tool access
     const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken, orgType };
     const { responseText, sessionId: newSessionId } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
 
-    // Stream response in thread with feedback buttons
+    // Clear the status, then stream the response in thread with feedback buttons.
+    await setAssistantStatus(client, channelId, threadTs, '');
     const streamer = sayStream();
     await streamer.append({ markdown_text: responseText });
     const feedbackBlocks = buildFeedbackBlocks();
