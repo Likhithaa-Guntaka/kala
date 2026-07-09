@@ -3,23 +3,44 @@
 
 /**
  * @typedef {Object} FeedbackEntry
+ * @property {number} [id] - Assigned on record, so a later comment can be attached.
  * @property {string} user_id
  * @property {string} message_summary - Short summary of the user's message.
  * @property {string} response_summary - Short summary of Benvu's response.
  * @property {'up' | 'down'} rating
+ * @property {string} [comment] - Optional "What went wrong?" note, only on 👎.
  * @property {string} timestamp - ISO 8601.
  */
 
 /** @type {FeedbackEntry[]} */
 const feedbackLog = [];
 
+let nextFeedbackId = 1;
+
 /**
- * Record a feedback entry.
+ * Record a feedback entry immediately and return it (with an id), so a comment can
+ * be attached later without losing the rating if the user never submits one.
  * @param {FeedbackEntry} entry
- * @returns {void}
+ * @returns {FeedbackEntry}
  */
 export function recordFeedback(entry) {
-  feedbackLog.push(entry);
+  const stored = { id: nextFeedbackId++, ...entry };
+  feedbackLog.push(stored);
+  return stored;
+}
+
+/**
+ * Attach an optional comment to an already-recorded entry. No-op for a blank
+ * comment or an unknown id.
+ * @param {number | undefined} id
+ * @param {string} comment
+ * @returns {FeedbackEntry | undefined}
+ */
+export function attachComment(id, comment) {
+  if (!id || !comment) return undefined;
+  const entry = feedbackLog.find((f) => f.id === id);
+  if (entry) entry.comment = comment;
+  return entry;
 }
 
 /**

@@ -2,8 +2,9 @@ import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
-import { buildAppHomeView } from '../views/app-home-builder.js';
+import { buildAppHomeView, CHANGE_ORG_VALUE } from '../views/app-home-builder.js';
 import { buildResponseBlocks } from '../views/feedback-builder.js';
+import { buildIssueModal } from '../views/issue-modal-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 
 /**
@@ -55,7 +56,7 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
     if (channelId) {
       await client.chat.postMessage({
         channel: channelId,
-        text: `You're set up as ${org.emoji} ${org.label}. Here are a few things to try.`,
+        text: `Set up for ${org.emoji} ${org.label}.`,
         blocks: buildTailoredPromptsDmBlocks(org),
       });
     }
@@ -67,20 +68,29 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
 }
 
 /**
- * Handle the "change organization type" button — clears the stored type and
- * re-renders the App Home onboarding.
- * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * Handle the App Home "More things I can help with" select. Picking an action
+ * opens the usual issue modal; picking "Change organization type" clears the
+ * stored type and re-renders the onboarding picker.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockStaticSelectAction>} args
  * @returns {Promise<void>}
  */
-export async function handleChangeOrgType({ ack, body, client, context, logger }) {
+export async function handleMoreActionsSelect({ ack, body, client, context, logger }) {
   await ack();
 
   try {
+    const selected = body.actions[0].selected_option?.value;
+    if (!selected) return;
     const userId = body.user.id;
-    sessionStore.clearOrgType(userId);
-    await refreshAppHome(client, context, userId);
+
+    if (selected === CHANGE_ORG_VALUE) {
+      sessionStore.clearOrgType(userId);
+      await refreshAppHome(client, context, userId);
+      return;
+    }
+
+    await client.views.open({ trigger_id: body.trigger_id, view: buildIssueModal(selected) });
   } catch (e) {
-    logger.error(`Failed to reset org type: ${e}`);
+    logger.error(`Failed to handle More actions select: ${e}`);
   }
 }
 

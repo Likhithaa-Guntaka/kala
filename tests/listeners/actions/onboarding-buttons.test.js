@@ -1,7 +1,8 @@
 import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
-import { handleChangeOrgType, handleOrgTypeSelected } from '../../../listeners/actions/onboarding-buttons.js';
+import { handleMoreActionsSelect, handleOrgTypeSelected } from '../../../listeners/actions/onboarding-buttons.js';
+import { CHANGE_ORG_VALUE } from '../../../listeners/views/app-home-builder.js';
 import { sessionStore } from '../../../thread-context/index.js';
 
 describe('onboarding action handlers', () => {
@@ -15,7 +16,7 @@ describe('onboarding action handlers', () => {
     fakeClient = {
       conversations: { open: mock.fn(async () => ({ channel: { id: 'D1' } })) },
       chat: { postMessage: mock.fn(async () => ({ ok: true, ts: '1.1' })) },
-      views: { publish: mock.fn(async () => ({ ok: true })) },
+      views: { publish: mock.fn(async () => ({ ok: true })), open: mock.fn(async () => ({ ok: true })) },
     };
     fakeContext = { botUserId: 'U0BOT', userToken: undefined };
     fakeLogger = { error: mock.fn() };
@@ -52,14 +53,46 @@ describe('onboarding action handlers', () => {
     });
   });
 
-  describe('handleChangeOrgType', () => {
-    it('clears the org type and republishes the home tab', async () => {
+  describe('handleMoreActionsSelect', () => {
+    it('clears the org type and republishes onboarding when "Change organization type" is picked', async () => {
       sessionStore.setOrgType('URESET', 'arts_culture');
-      const body = { user: { id: 'URESET' }, actions: [{ value: 'change' }] };
-      await handleChangeOrgType({ ack: fakeAck, body, client: fakeClient, context: fakeContext, logger: fakeLogger });
+      const body = {
+        user: { id: 'URESET' },
+        trigger_id: 'T1',
+        actions: [{ selected_option: { value: CHANGE_ORG_VALUE } }],
+      };
+      await handleMoreActionsSelect({
+        ack: fakeAck,
+        body,
+        client: fakeClient,
+        context: fakeContext,
+        logger: fakeLogger,
+      });
 
       assert.strictEqual(sessionStore.getOrgType('URESET'), null);
       assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+      assert.strictEqual(fakeClient.views.open.mock.callCount(), 0);
+    });
+
+    it('opens the issue modal when a regular action is picked', async () => {
+      const body = {
+        user: { id: 'UPICK' },
+        trigger_id: 'T2',
+        actions: [{ selected_option: { value: 'Summarize Meeting Notes' } }],
+      };
+      await handleMoreActionsSelect({
+        ack: fakeAck,
+        body,
+        client: fakeClient,
+        context: fakeContext,
+        logger: fakeLogger,
+      });
+
+      assert.strictEqual(fakeClient.views.open.mock.callCount(), 1);
+      const opened = fakeClient.views.open.mock.calls[0].arguments[0];
+      assert.strictEqual(opened.trigger_id, 'T2');
+      assert.strictEqual(opened.view.type, 'modal');
+      assert.strictEqual(fakeClient.views.publish.mock.callCount(), 0);
     });
   });
 });

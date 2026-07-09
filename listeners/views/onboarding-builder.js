@@ -54,9 +54,8 @@ export function buildWelcomeDmBlocks() {
       text: {
         type: 'mrkdwn',
         text:
-          "Hi, I'm *Benvu*, your AI teammate for nonprofit work — I help you find grants, " +
-          'draft impact reports, thank donors, announce volunteer shifts, and more.\n\n' +
-          'To tailor things to you, *what kind of organization are you?*',
+          "Hi, I'm *Benvu*. I find grants, draft reports, and track deadlines, in any language.\n\n" +
+          'What kind of organization are you?',
       },
     },
     buildOrgTypeActionsBlock(),
@@ -78,16 +77,13 @@ export function buildTailoredPromptsDmBlocks(orgType) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `Great — you're set up as *${orgType.emoji} ${orgType.label}*. Here are a few things to try:`,
+        text: `Set up for ${orgType.emoji} *${orgType.label}*.`,
       },
     },
     buildPromptActionsBlock(orgType),
-    { type: 'divider' },
     {
       type: 'context',
-      elements: [
-        { type: 'mrkdwn', text: 'Tap one to run it, or just type what you need. Want me to help with something else?' },
-      ],
+      elements: [{ type: 'mrkdwn', text: 'Tap one, or just type what you need.' }],
     },
   ];
 }

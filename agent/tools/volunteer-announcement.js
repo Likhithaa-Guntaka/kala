@@ -16,23 +16,24 @@ export const createVolunteerAnnouncementTool = tool(
     contact_person: z.string().optional().describe('Who to contact to sign up, if given.'),
   },
   async ({ event_name, date, time, volunteers_needed, location, skills_needed, contact_person }) => {
+    // One emoji on the heading only — no per-bullet decoration.
     const details = [
-      `• 📅 *When:* ${date}, ${time}`,
-      location ? `• 📍 *Where:* ${location}` : null,
-      `• 🙌 *Volunteers needed:* ${volunteers_needed}`,
-      skills_needed ? `• 🧰 *Helpful skills:* ${skills_needed}` : null,
+      `• *When:* ${date}, ${time}`,
+      location ? `• *Where:* ${location}` : null,
+      `• *Volunteers needed:* ${volunteers_needed}`,
+      skills_needed ? `• *Helpful skills:* ${skills_needed}` : null,
     ].filter(Boolean);
 
     const signUp = contact_person
-      ? `React with ✋ or message *${contact_person}* to grab a spot.`
-      : 'React with ✋ below or reply to this message to grab a spot.';
+      ? `Reply here or message *${contact_person}* to grab a spot.`
+      : 'Reply to this message to grab a spot.';
 
     const announcement =
       `📣 *Volunteers needed: ${event_name}*\n\n` +
-      `We're looking for *${volunteers_needed}* helping hands — could that be you?\n\n` +
+      `We're looking for *${volunteers_needed}* helping hands.\n\n` +
       `${details.join('\n')}\n\n` +
       `${signUp}\n\n` +
-      'Every shift makes a real difference. Thank you! 💛';
+      'Every shift makes a real difference. Thank you!';
 
     const text = `${announcement}\n\n---\nWant me to post this to a channel? Just reply with the channel name (like #general), or ask me to tweak it first.`;
 

@@ -1,7 +1,8 @@
 import { buildWelcomeDmBlocks } from '../views/onboarding-builder.js';
 
 // Fallback text (shown in notifications and by clients that can't render blocks).
-const WELCOME_FALLBACK = "Hi, I'm Benvu, your AI teammate for nonprofit work. What kind of organization are you?";
+const WELCOME_FALLBACK =
+  "Hi, I'm Benvu. I find grants, draft reports, and track deadlines, in any language. What kind of organization are you?";
 
 // Idempotency guard: Socket Mode can deliver the same event over more than one
 // connection (and Slack may retry), which otherwise sends the welcome twice.

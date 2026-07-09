@@ -1,5 +1,5 @@
 export const HELP_TEXT = [
-  "*Hi, I'm Benvu* — your AI teammate for nonprofit work. Here's what I can do:",
+  "*Hi, I'm Benvu.* I find grants, draft reports, and track deadlines, in any language.",
   '',
   '• `/grant [query]` — Find grant opportunities (e.g. `/grant youth education under $50k`)',
   '• `/report [description]` — Draft an impact report from what you accomplished',
