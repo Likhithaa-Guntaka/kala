@@ -10,6 +10,7 @@ import {
   findGrantsTool,
   summarizeMeetingTool,
 } from './tools/index.js';
+import { formatWorkspaceResults, searchWorkspaceContext } from './tools/rts.js';
 
 // Authentication.
 // Benvu runs on the Claude Agent SDK, which resolves credentials in this order:
@@ -90,6 +91,11 @@ draft reports, track deadlines, and communicate — all through Slack.
    - "draft_donor_thankyou" — want to thank donors after a gift, campaign, or drive
    - "create_volunteer_announcement" — want to recruit volunteers for an event or shift
    - "summarize_meeting" — pasted meeting notes to summarize or turn into action items
+   - "search_workspace" — the user asks about something the TEAM discussed in Slack, or you
+     need real context before drafting. It searches your workspace messages and files in
+     real time (e.g. "what did we say about the Ford grant?", "find our last donor update",
+     "who owns the annual report?"). Use it to ground your answers in what the team actually
+     said, then summarize the findings in the user's language.
    - "track_deadline" — want Benvu to remember a deadline and automatically nudge them (or
      the team) in this Slack channel before it is due. Use this for anything like "remind me",
      "don't let me forget", or a due date to keep track of. Needs the due date as YYYY-MM-DD
@@ -194,6 +200,7 @@ const ALLOWED_TOOLS = [
   'find_grants',
   'mark_resolved',
   'post_to_channel',
+  'search_workspace',
   'summarize_meeting',
   'track_deadline',
 ];
@@ -374,6 +381,32 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     },
   );
 
+  const searchWorkspaceTool = tool(
+    'search_workspace',
+    "Search the team's Slack workspace in real time for messages and files relevant to a query — " +
+      'past grant discussions, donor updates, decisions, who owns a deadline, and more. Use this when the ' +
+      'user asks about something the team talked about, or to gather real context before drafting a report ' +
+      "or reply. Returns snippets with links; summarize them in the user's language.",
+    {
+      query: z
+        .string()
+        .describe(
+          'What to look for — a natural-language question or keywords, e.g. "Ford Foundation grant" or "annual report deadline".',
+        ),
+      include_files: z.boolean().optional().describe('Also search shared files, not just messages. Default false.'),
+      limit: z.number().int().min(1).max(20).optional().describe('Max results to return (1-20). Default 10.'),
+    },
+    async ({ query, include_files = false, limit = 10 }) => {
+      const result = await searchWorkspaceContext({
+        userToken: deps?.userToken,
+        query,
+        contentTypes: include_files ? ['messages', 'files'] : ['messages'],
+        limit,
+      });
+      return { content: [{ type: 'text', text: formatWorkspaceResults(query, result) }] };
+    },
+  );
+
   const benvuToolsServer = createSdkMcpServer({
     name: 'benvu-tools',
     version: '1.0.0',
@@ -385,6 +418,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       findGrantsTool,
       markResolvedTool,
       postToChannelTool,
+      searchWorkspaceTool,
       summarizeMeetingTool,
       trackDeadlineTool,
     ],

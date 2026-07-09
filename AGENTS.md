@@ -90,6 +90,7 @@ The store uses a `Map` keyed by `${channelId}:${threadTs}` with TTL-based cleanu
 
 - `grant-finder.js` — `find_grants(query)` returns up to 10 grants with name, deadline, amount, and eligibility.
 - `report-drafter.js` — `draft_impact_report(impact)` expands a one-line impact description into a full report draft.
+- `rts.js` — `search_workspace` (closure in `agent/benvu.js`) searches the team's Slack workspace in real time via the **Real-Time Search API** (`assistant.search.context`), using `deps.userToken`. Returns message/file snippets with permalinks for the agent to summarize.
 - `track_deadline` (closure in `agent/benvu.js`, backed by `agent/tools/deadline-store.js`) — records a deadline bound to the Slack channel/user. The background `agent/deadline-scheduler.js` loop (started from `app.js` / `app-oauth.js`) reads `getDueDeadlines()` and posts a Slack reminder once per deadline before it's due.
 
 Tools in `agent/tools/` are defined using `tool()` from the Claude Agent SDK:

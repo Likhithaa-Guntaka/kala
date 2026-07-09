@@ -15,13 +15,17 @@ Benvu gives your team instant help through four entry points:
 
 Benvu detects the language each user writes in and replies in that same language.
 
-Benvu uses three simulated tools to assist users:
+Benvu's tools:
 
-* **Find Grants** — Searches for grant opportunities and returns matches with name, deadline, amount, and eligibility.
-* **Draft a Report** — Turns a one-line description of impact into a full, ready-to-use impact report draft.
-* **Track a Deadline** — Creates a friendly, formatted reminder for a grant deadline.
+* **Find Grants** — Searches the live [Grants.gov](https://www.grants.gov) federal database (real, public API) and returns matches with name, deadline, award amount, and eligibility.
+* **Draft a Report / Donor Thank-You / Volunteer Announcement** — Turns a one-line prompt into a ready-to-use draft.
+* **Summarize Meeting Notes** — Turns pasted notes into a summary with action items.
+* **Track a Deadline** — Remembers a deadline and **automatically nudges the right person in Slack** before it's due (background scheduler).
+* **Search Workspace** — Searches the team's Slack messages and files in real time via the **Real-Time Search API** to ground answers in what the team actually discussed.
 
-> **Note:** All tools return simulated data for demonstration purposes. In a production app, these would connect to real grant databases and reminder systems.
+### Real-Time Search (RTS) API
+
+Benvu uses Slack's [Real-Time Search API](https://docs.slack.dev/apis/web-api/real-time-search-api/) (`assistant.search.context`) so it can pull real context from your workspace on demand — past grant discussions, donor updates, or who owns a deadline — without anything being stored outside Slack. It runs on the user's token (the same connection used for the MCP Server) and the `search:read.*` scopes in [manifest.json](./manifest.json).
 
 ### Slack MCP Server
 
