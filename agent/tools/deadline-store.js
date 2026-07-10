@@ -66,6 +66,20 @@ export function listDeadlines() {
 }
 
 /**
+ * Deadlines whose title, owner, or notes mention `subject` (case-insensitive).
+ * Used by prep_briefing to surface what's coming up for a person or org.
+ * @param {string} subject
+ * @returns {TrackedDeadline[]}
+ */
+export function findDeadlines(subject) {
+  const q = (subject || '').trim().toLowerCase();
+  if (!q) return [];
+  return listDeadlines().filter((d) =>
+    [d.title, d.owner, d.notes].some((f) => typeof f === 'string' && f.toLowerCase().includes(q)),
+  );
+}
+
+/**
  * Whole days from today until an ISO due date. Negative means overdue.
  * @param {string} dueDate ISO YYYY-MM-DD.
  * @returns {number}

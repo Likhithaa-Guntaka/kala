@@ -8,6 +8,9 @@ import {
   createVolunteerAnnouncementTool,
   draftDonorThankYouTool,
   draftImpactReportTool,
+  gatherBriefing,
+  PREP_BRIEFING_DESCRIPTION,
+  PREP_BRIEFING_SCHEMA,
   summarizeMeetingTool,
 } from './tools/index.js';
 import { formatWorkspaceResults, searchWorkspaceContext } from './tools/rts.js';
@@ -101,6 +104,12 @@ draft reports, track deadlines, and communicate — all through Slack.
      "don't let me forget", or a due date to keep track of. Needs the due date as YYYY-MM-DD
      (ask if it's unclear, or convert a plain date they gave).
    - "post_to_channel" — the user has confirmed they want something posted to a specific channel
+   - "prep_briefing" — the user wants to get ready for a call or meeting with a person or
+     organization, or catch up on them. Triggers: "prep me for my call with…", "brief me on…",
+     "catch me up on…", "get me ready for…", "what do we know about…". Pass the subject (the
+     person or org name). It gathers past mentions, open asks, and any tracked deadlines. Present
+     the result as a SHORT briefing in the user's language — a few sentences on what's been
+     discussed, what's outstanding, and what's coming up — not a raw list of everything it found.
 3. Present the tool's result simply, in the user's language, keeping its formatting, and offer a next step
 
 ## POSTING TO A CHANNEL
@@ -200,6 +209,7 @@ const ALLOWED_TOOLS = [
   'find_grants',
   'mark_resolved',
   'post_to_channel',
+  'prep_briefing',
   'search_workspace',
   'summarize_meeting',
   'track_deadline',
@@ -407,6 +417,18 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     },
   );
 
+  // Prep briefing: gather workspace mentions + open asks + tracked deadlines for a
+  // subject, and hand the model organized material to write a short briefing from.
+  const prepBriefingTool = tool(
+    'prep_briefing',
+    PREP_BRIEFING_DESCRIPTION,
+    PREP_BRIEFING_SCHEMA,
+    async ({ subject }) => {
+      const text = await gatherBriefing({ subject, userToken: deps?.userToken });
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
   // Capture structured grant results out-of-band so the caller can render native
   // cards. The text the tool returns to the model is unchanged, so reasoning and
   // prose are unaffected.
@@ -428,6 +450,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       findGrantsTool,
       markResolvedTool,
       postToChannelTool,
+      prepBriefingTool,
       searchWorkspaceTool,
       summarizeMeetingTool,
       trackDeadlineTool,

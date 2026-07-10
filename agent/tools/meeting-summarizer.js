@@ -39,6 +39,38 @@ function findDeadline(s) {
   return null;
 }
 
+/**
+ * @typedef {Object} ActionItem
+ * @property {string} task
+ * @property {string} owner - Detected owner, or "TBD".
+ * @property {string | null} deadline
+ */
+
+/**
+ * Pull decisions and open action items (asks/commitments) out of free text. Shared
+ * by summarize_meeting (over pasted notes) and prep_briefing (over workspace search
+ * results), so both use the same cue detection rather than duplicating it.
+ * @param {string} text
+ * @returns {{ sentences: string[], decisions: string[], actionItems: ActionItem[], lead: string }}
+ */
+export function analyzeNotes(text) {
+  const sentences = splitSentences(text || '');
+
+  const decisions = sentences.filter((s) => DECISION_CUE.test(s)).slice(0, 8);
+  const decisionSet = new Set(decisions);
+  const actionItems = sentences
+    .filter((s) => ACTION_CUE.test(s) && !decisionSet.has(s))
+    .slice(0, 8)
+    .map((s) => ({ task: s, owner: findOwner(s), deadline: findDeadline(s) }));
+
+  const lead = sentences
+    .filter((s) => !ACTION_CUE.test(s) && !DECISION_CUE.test(s))
+    .slice(0, 2)
+    .join(' ');
+
+  return { sentences, decisions, actionItems, lead };
+}
+
 export const summarizeMeetingTool = tool(
   'summarize_meeting',
   'Turn raw meeting notes into a clean Slack summary with action items and decisions. ' +
@@ -50,19 +82,7 @@ export const summarizeMeetingTool = tool(
     date: z.string().optional().describe('The meeting date, if given.'),
   },
   async ({ notes, meeting_name, date }) => {
-    const sentences = splitSentences(notes);
-
-    const decisions = sentences.filter((s) => DECISION_CUE.test(s)).slice(0, 8);
-    const decisionSet = new Set(decisions);
-    const actionItems = sentences
-      .filter((s) => ACTION_CUE.test(s) && !decisionSet.has(s))
-      .slice(0, 8)
-      .map((s) => ({ task: s, owner: findOwner(s), deadline: findDeadline(s) }));
-
-    const lead = sentences
-      .filter((s) => !ACTION_CUE.test(s) && !DECISION_CUE.test(s))
-      .slice(0, 2)
-      .join(' ');
+    const { sentences, decisions, actionItems, lead } = analyzeNotes(notes);
     const summary = lead || `${sentences.length} point(s) discussed.`;
 
     const titleParts = ['*Meeting summary'];
