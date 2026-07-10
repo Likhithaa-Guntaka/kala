@@ -14,7 +14,7 @@ function isGenericMessageEvent(event) {
 }
 
 /**
- * @typedef {{ event_type: 'issue_submission', event_payload: { user_id: string } }} IssueSubmissionMetadata
+ * @typedef {{ event_type: 'issue_submission', event_payload: { user_id: string, prompt?: string } }} IssueSubmissionMetadata
  */
 
 /**
@@ -24,6 +24,20 @@ function isGenericMessageEvent(event) {
 function getIssueMetadata(event) {
   const metadata = /** @type {any} */ (event).metadata;
   return metadata?.event_type === 'issue_submission' ? metadata : null;
+}
+
+/**
+ * Choose the text to run the agent on. An issue submission (from a Home tab card)
+ * shows the user a short human line but carries the real instruction in metadata,
+ * so prefer that prompt; a blank prompt or a normal message falls back to the
+ * message's own text. This is the guard that keeps an empty modal field from
+ * reaching the agent as the visible "On it…" line instead of the real request.
+ * @param {IssueSubmissionMetadata | null} issueMetadata
+ * @param {import('@slack/types').GenericMessageEvent} event
+ * @returns {string}
+ */
+export function agentPromptFor(issueMetadata, event) {
+  return issueMetadata?.event_payload.prompt || event.text || '';
 }
 
 /**
@@ -58,7 +72,7 @@ export async function handleMessage({ client, context, event, logger, say, saySt
 
   try {
     const channelId = event.channel;
-    const text = event.text || '';
+    const text = agentPromptFor(issueMetadata, event);
     const threadTs = event.thread_ts || event.ts;
 
     // For issue submissions the bot posted the message, so the real

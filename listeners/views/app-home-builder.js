@@ -153,12 +153,15 @@ function orgTypeRows() {
  *
  * @param {string | null} [_botUserId] - Unused; kept so existing call sites stay unchanged.
  * @param {string | null} [orgType] - The user's stored org type id, if any.
- * @param {{ firstName?: string, now?: Date }} [opts] - Personalization: the user's
- *   first name (for the greeting) and the current time (injected for testability).
+ * @param {{ firstName?: string, now?: Date, notice?: string }} [opts] - Personalization:
+ *   the user's first name (for the greeting), the current time (injected for
+ *   testability), and a transient `notice` banner shown once at the top (e.g. an
+ *   "I sent that to your messages" confirmation) that clears on the next refresh.
  * @returns {import('@slack/types').HomeView}
  */
 export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   const org = getOrgTypeById(orgType);
+  const notice = (opts.notice || '').trim();
 
   if (!org) {
     // First open — one clear setup question, then the picker.
@@ -175,7 +178,12 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   const now = opts.now instanceof Date ? opts.now : new Date();
 
   /** @type {import('@slack/types').KnownBlock[]} */
-  const blocks = [header(greeting(now, opts.firstName)), section(TAGLINE), divider()];
+  const blocks = [header(greeting(now, opts.firstName))];
+  // A transient confirmation banner, shown once at the top after a Home action.
+  if (notice) {
+    blocks.push(section(notice), divider());
+  }
+  blocks.push(section(TAGLINE), divider());
 
   blocks.push(...actionCards(org));
 

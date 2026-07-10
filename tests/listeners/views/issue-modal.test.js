@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleIssueSubmission } from '../../../listeners/views/issue-modal.js';
+import { sessionStore } from '../../../thread-context/index.js';
 
 describe('handleIssueSubmission', () => {
   let fakeAck;
@@ -10,22 +11,29 @@ describe('handleIssueSubmission', () => {
   let fakeClient;
   let fakeLogger;
 
-  beforeEach(() => {
-    fakeAck = mock.fn(async () => {});
-    fakeBody = {
+  /** @param {string|undefined} description */
+  function bodyWith(description) {
+    return {
       view: {
         state: {
           values: {
             category_block: { category_select: { selected_option: { value: 'Find Grants' } } },
-            description_block: { description_input: { value: 'Grants for youth education under $50k' } },
+            description_block: { description_input: { value: description } },
           },
         },
       },
     };
-    fakeContext = { userId: 'U123' };
+  }
+
+  beforeEach(() => {
+    fakeAck = mock.fn(async () => {});
+    fakeBody = bodyWith('Grants for youth education under $50k');
+    fakeContext = { userId: 'U123', botUserId: 'U0BOT' };
     fakeClient = {
       conversations: { open: mock.fn(async () => ({ channel: { id: 'D123' } })) },
       chat: { postMessage: mock.fn(async () => ({ ok: true })) },
+      views: { publish: mock.fn(async () => ({ ok: true })) },
+      users: { info: mock.fn(async () => ({ user: { profile: { first_name: 'Dee' } } })) },
     };
     fakeLogger = { error: mock.fn() };
   });
@@ -50,11 +58,10 @@ describe('handleIssueSubmission', () => {
       logger: fakeLogger,
     });
     assert.strictEqual(fakeClient.conversations.open.mock.callCount(), 1);
-    const callArgs = fakeClient.conversations.open.mock.calls[0].arguments[0];
-    assert.strictEqual(callArgs.users, 'U123');
+    assert.strictEqual(fakeClient.conversations.open.mock.calls[0].arguments[0].users, 'U123');
   });
 
-  it('posts message with category, description, and metadata', async () => {
+  it('posts a human parent message that names the category, not debug fields', async () => {
     await handleIssueSubmission({
       ack: fakeAck,
       body: fakeBody,
@@ -62,12 +69,74 @@ describe('handleIssueSubmission', () => {
       context: fakeContext,
       logger: fakeLogger,
     });
+    const msg = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
+    assert.strictEqual(msg.channel, 'D123');
+    assert.ok(msg.text.includes('Find Grants'), 'names the category');
+    assert.ok(/thread/i.test(msg.text), 'invites the user to the thread');
+    // The old debug-looking text must be gone.
+    assert.ok(!msg.text.includes('Category:'), 'no raw field labels');
+    assert.ok(!msg.text.includes('Description:'), 'no raw field labels');
+    assert.ok(!/undefined|null/.test(msg.text), 'never renders undefined/null');
+  });
+
+  it('carries the real request as the agent prompt in metadata (not the visible text)', async () => {
+    await handleIssueSubmission({
+      ack: fakeAck,
+      body: fakeBody,
+      client: fakeClient,
+      context: fakeContext,
+      logger: fakeLogger,
+    });
+    const msg = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
+    assert.strictEqual(msg.metadata.event_type, 'issue_submission');
+    assert.strictEqual(msg.metadata.event_payload.user_id, 'U123');
+    assert.strictEqual(msg.metadata.event_payload.prompt, 'Find Grants: Grants for youth education under $50k');
+  });
+
+  it('with the Details field left blank, prompt is just the category and text has no "undefined"', async () => {
+    const body = bodyWith(undefined);
+    await handleIssueSubmission({ ack: fakeAck, body, client: fakeClient, context: fakeContext, logger: fakeLogger });
+    const msg = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
+    assert.ok(!/undefined|null/.test(msg.text));
+    assert.strictEqual(msg.metadata.event_payload.prompt, 'Find Grants');
+  });
+
+  it('republishes the Home tab with a confirmation banner naming the category', async () => {
+    sessionStore.setOrgType('U123', 'education'); // onboarded — the banner renders
+    try {
+      await handleIssueSubmission({
+        ack: fakeAck,
+        body: fakeBody,
+        client: fakeClient,
+        context: fakeContext,
+        logger: fakeLogger,
+      });
+      assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+      const publish = fakeClient.views.publish.mock.calls[0].arguments[0];
+      assert.strictEqual(publish.user_id, 'U123');
+      assert.strictEqual(publish.view.type, 'home');
+      const banner = publish.view.blocks.find((b) => b.type === 'section' && /messages tab/i.test(b.text?.text || ''));
+      assert.ok(banner, 'a confirmation banner is present');
+      assert.ok(banner.text.text.includes('Find Grants'), 'banner names the category');
+    } finally {
+      sessionStore.clearOrgType('U123');
+    }
+  });
+
+  it('still completes the submission if the Home banner republish fails', async () => {
+    fakeClient.views.publish = mock.fn(async () => {
+      throw new Error('publish failed');
+    });
+    await handleIssueSubmission({
+      ack: fakeAck,
+      body: fakeBody,
+      client: fakeClient,
+      context: fakeContext,
+      logger: fakeLogger,
+    });
+    // DM was still posted; the banner failure was caught and logged, not thrown.
     assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
-    const callArgs = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
-    assert.strictEqual(callArgs.channel, 'D123');
-    assert.ok(callArgs.text.includes('Find Grants'));
-    assert.ok(callArgs.text.includes('Grants for youth education under $50k'));
-    assert.strictEqual(callArgs.metadata.event_type, 'issue_submission');
+    assert.strictEqual(fakeLogger.error.mock.callCount(), 1);
   });
 
   it('logs error when conversations.open fails', async () => {

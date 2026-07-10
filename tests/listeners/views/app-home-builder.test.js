@@ -136,6 +136,25 @@ describe('buildAppHomeView', () => {
       assert.ok(dividers >= 5 && dividers <= 7, `expected grouping dividers, got ${dividers}`);
     });
 
+    it('shows a transient notice banner near the top when one is passed', () => {
+      const notice = 'Sent to your messages — open the Messages tab.';
+      const view = buildAppHomeView(null, 'education', {
+        firstName: 'A',
+        now: new Date('2026-07-10T09:00:00'),
+        notice,
+      });
+      // Banner sits right under the greeting header, above the tagline.
+      const idx = view.blocks.findIndex((b) => b.type === 'section' && b.text?.text === notice);
+      assert.ok(idx >= 0, 'notice banner is present');
+      assert.ok(idx < view.blocks.findIndex((b) => b.type === 'section' && b.text?.text === TAGLINE));
+      assertNoEmoji(view);
+    });
+
+    it('omits the notice banner when none is passed (auto-clears on refresh)', () => {
+      const view = buildAppHomeView(null, 'education', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+      assert.ok(!view.blocks.some((b) => b.type === 'section' && /messages tab/i.test(b.text?.text || '')));
+    });
+
     it('moves org label + "reach me" into a single lighter context footer', () => {
       const org = getOrgTypeById('education');
       const view = buildAppHomeView(null, 'education', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });

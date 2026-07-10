@@ -50,6 +50,19 @@ describe('onboarding action handlers', () => {
       assert.strictEqual(sessionStore.getOrgType('UBAD'), null);
       assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 0);
     });
+
+    it('does NOT re-post the tailored DM when changing an already-set org type', async () => {
+      // Simulate a user who already onboarded, then picks a different type.
+      sessionStore.setOrgType('UCHANGE', 'food_bank');
+      const body = { user: { id: 'UCHANGE' }, actions: [{ value: 'education' }] };
+      await handleOrgTypeSelected({ ack: fakeAck, body, client: fakeClient, context: fakeContext, logger: fakeLogger });
+
+      // Stored the new type and refreshed the Home tab...
+      assert.strictEqual(sessionStore.getOrgType('UCHANGE'), 'education');
+      assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+      // ...but did NOT clutter the DM with another "Set up for X" message.
+      assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 0);
+    });
   });
 
   describe('handleChangeOrgType', () => {

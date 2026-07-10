@@ -22,8 +22,10 @@ async function refreshAppHome(client, context, userId) {
 }
 
 /**
- * Handle an org-type selection button. Stores the choice, sends a tailored
- * follow-up DM, and refreshes the App Home tab.
+ * Handle an org-type selection button. Stores the choice and refreshes the App
+ * Home tab. On the FIRST time a user onboards (org type going from none to a real
+ * value) it also sends the tailored-prompts DM; on a later change it only
+ * refreshes the Home tab, so repeat changes don't re-post that DM.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
  * @returns {Promise<void>}
  */
@@ -35,6 +37,10 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
     const orgTypeId = body.actions[0].value;
     const org = getOrgTypeById(orgTypeId);
     if (!org) return;
+
+    // Was this user already onboarded? Capture before we overwrite it — the
+    // tailored DM should only go out the first time (null -> a real value).
+    const isFirstOnboarding = sessionStore.getOrgType(userId) === null;
 
     // Durable persistence (survives restarts) is handled by the disk-backed store.
     sessionStore.setOrgType(userId, org.id);
@@ -52,15 +58,20 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
       // Not supported for this user/workspace — durable persistence already handled on disk.
     }
 
-    // Follow-up DM with three tailored example prompts as native buttons.
-    const conversation = await client.conversations.open({ users: userId });
-    const channelId = conversation.channel?.id;
-    if (channelId) {
-      await client.chat.postMessage({
-        channel: channelId,
-        text: `Set up for ${org.label}.`,
-        blocks: buildTailoredPromptsDmBlocks(org),
-      });
+    // First-time onboarding only: a follow-up DM with three tailored example
+    // prompts as native buttons. On a later org-type change, the refreshed Home
+    // tab already shows the tailored cards, so re-posting this would just clutter
+    // the DM.
+    if (isFirstOnboarding) {
+      const conversation = await client.conversations.open({ users: userId });
+      const channelId = conversation.channel?.id;
+      if (channelId) {
+        await client.chat.postMessage({
+          channel: channelId,
+          text: `Set up for ${org.label}.`,
+          blocks: buildTailoredPromptsDmBlocks(org),
+        });
+      }
     }
 
     await refreshAppHome(client, context, userId);
