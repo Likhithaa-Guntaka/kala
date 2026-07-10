@@ -11,6 +11,10 @@ import { startDeadlineScheduler } from './agent/deadline-scheduler.js';
 import { AUTH_MODE } from './agent/index.js';
 import { registerListeners } from './listeners/index.js';
 
+// TEMP DEBUG (remove after the App Home emoji investigation): prove which build
+// and which entry point is actually running.
+console.log('=== BENVU BUILD 062b77d+debug1 === entry=app-oauth.js (http/oauth mode) ===');
+
 const manifest = JSON.parse(readFileSync('manifest.json', 'utf-8'));
 const botScopes = manifest.oauth_config.scopes.bot;
 const userScopes = manifest.oauth_config.scopes.user;

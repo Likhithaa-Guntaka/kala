@@ -34,6 +34,12 @@ export async function handleAppHomeOpened({ client, event, context, logger }) {
     const userId = /** @type {string} */ (context.userId);
     const orgType = sessionStore.getOrgType(userId);
     const view = buildAppHomeView(context.botUserId, orgType);
+
+    // TEMP DEBUG (remove after the App Home emoji investigation): dump the exact
+    // payload we hand to Slack, right before publishing.
+    console.log(`=== BENVU HOME PUBLISH [app-home-opened] build=062b77d+debug1 user=${userId} orgType=${orgType} ===`);
+    console.log(JSON.stringify(view.blocks, null, 2));
+
     await client.views.publish({ user_id: userId, view });
   } catch (e) {
     logger.error(`Failed to handle app_home_opened: ${e}`);

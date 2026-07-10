@@ -16,6 +16,12 @@ import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 async function refreshAppHome(client, context, userId) {
   const orgType = sessionStore.getOrgType(userId);
   const view = buildAppHomeView(context.botUserId, orgType);
+
+  // TEMP DEBUG (remove after the App Home emoji investigation): the second
+  // publish path — fires after an org-type pick or "Change organization type".
+  console.log(`=== BENVU HOME PUBLISH [refreshAppHome] build=062b77d+debug1 user=${userId} orgType=${orgType} ===`);
+  console.log(JSON.stringify(view.blocks, null, 2));
+
   await client.views.publish({ user_id: userId, view });
 }
 
