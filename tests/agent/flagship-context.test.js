@@ -93,4 +93,25 @@ describe('flagshipContext', () => {
       assert.match(text, /track_deadline/);
     });
   });
+
+  describe('academic-calendar seeded deadlines (Education)', () => {
+    const text = flagshipContext(getOrgTypeById('education'));
+
+    it('offers the 990 with the stated December fiscal-year assumption', () => {
+      assert.match(text, /Form 990/);
+      assert.match(text, /December/);
+      assert.match(text, /May 15/);
+    });
+
+    it('adds academic-calendar framing (the seed_deadlines note)', () => {
+      assert.match(text, /academic calendar/i);
+      assert.match(text, /term|summer/i);
+    });
+
+    it('frames state performance and 21st CCLC dates as ask-the-user, not fabricated', () => {
+      assert.match(text, /performance report/i);
+      assert.match(text, /21st CCLC|Community Learning Centers/);
+      assert.match(text, /ask them for the current deadline/i);
+    });
+  });
 });

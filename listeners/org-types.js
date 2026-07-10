@@ -12,7 +12,7 @@
  * @property {string} [month] - For 'annual': the recurring "MM-DD" (e.g. "05-15").
  *
  * @typedef {{ kind: 'none' }
- *   | { kind: 'seed_deadlines', deadlines: SeededDeadline[] }
+ *   | { kind: 'seed_deadlines', deadlines: SeededDeadline[], note?: string }
  *   | { kind: 'privacy_mode' }
  *   | { kind: 'multilingual', defaultLanguages: string[] }
  *   | { kind: 'match_tracker', ratio: string, source: string }
@@ -85,10 +85,40 @@ export const ORG_TYPES = [
     label: 'Education / Youth Programs',
     primaryActions: ['category_find_grants', 'category_draft_report', 'category_track_deadline'],
     tailoredPrompts: [
-      'Find youth education grants under $100k in New York',
-      'Draft an impact report, we tutored 150 students this semester',
-      'Write a thank you note to our school district partners',
+      'Summarize attendance and outcomes for our state performance report',
+      'Draft our 21st Century Community Learning Centers continuation report',
+      'Find youth education funding',
     ],
+    defaultGrantCategories: ['ED'],
+    rtsPrompts: [
+      'Catch me up on our summer program planning',
+      'Summarize what we decided about our after-school schedule',
+    ],
+    flagship: {
+      kind: 'seed_deadlines',
+      note:
+        'This organization runs on an academic calendar — school year, terms, and summer programs — so its ' +
+        'reporting and grant deadlines tend to cluster around term starts, the end of the school year, and the ' +
+        'summer program cycle. When you offer to track a date, frame it against their academic calendar and ask ' +
+        'which term or program it falls in if that helps.',
+      deadlines: [
+        {
+          title: 'IRS Form 990',
+          rule: 'irs990',
+          framing: 'the annual IRS Form 990 information return every tax-exempt nonprofit files',
+        },
+        {
+          title: 'State attendance and performance report',
+          rule: 'state_varies',
+          framing: 'your state education agency attendance and performance report, tied to the academic year',
+        },
+        {
+          title: '21st Century Community Learning Centers (21st CCLC) continuation',
+          rule: 'state_varies',
+          framing: 'your 21st CCLC continuation application, which your state education agency schedules each year',
+        },
+      ],
+    },
   },
   {
     id: 'immigrant_refugee',

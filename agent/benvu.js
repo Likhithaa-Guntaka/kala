@@ -247,7 +247,8 @@ export function flagshipContext(org) {
       '\n\n## RECURRING DEADLINES YOU CAN OFFER TO TRACK\n' +
       'This organization has recurring compliance deadlines. When it is relevant, you may proactively OFFER ' +
       'to track these — but never create a reminder until the user confirms, and always use track_deadline to ' +
-      `set one (it is the only way a reminder is saved). Do not silently assume any date.\n${lines}`
+      'set one (it is the only way a reminder is saved). Do not silently assume any date.' +
+      `${flagship.note ? `\n${flagship.note}` : ''}\n${lines}`
     );
   }
 

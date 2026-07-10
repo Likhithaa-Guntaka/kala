@@ -161,8 +161,8 @@ describe('buildAppHomeView', () => {
       assert.strictEqual(new Set(ids).size, ids.length);
     });
 
-    it('omits the RTS row for a type that defines none (Education)', () => {
-      const view = buildAppHomeView(null, 'education', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+    it('omits the RTS row for a type that defines none (General Nonprofit)', () => {
+      const view = buildAppHomeView(null, 'general', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
       assert.ok(block(view, 'home_tailored_prompts'), 'tailored row present');
       assert.strictEqual(block(view, 'home_rts_prompts'), undefined);
     });
