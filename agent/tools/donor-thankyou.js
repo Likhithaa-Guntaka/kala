@@ -10,9 +10,11 @@ import { z } from 'zod';
 export function createDraftDonorThankYouTool(onDraft) {
   return tool(
     'draft_donor_thankyou',
-    'Draft a warm, genuine, non-generic thank-you message for a group of donors. ' +
-      'Use this when a user wants to thank donors after a gift, campaign, or drive. ' +
-      'Extract the donor count, gift range, and any campaign name or personal note from what the user said.',
+    'Draft a warm, genuine, non-generic thank-you message for donors. Use this when a user ' +
+      'wants to thank donors after a gift, campaign, or drive. First establish WHO is being ' +
+      'thanked — which donors, and for what campaign, drive, or occasion — before gathering the ' +
+      'rest, like how many donors and the gift size. Use only specifics the user actually gave ' +
+      'you or a tool returned; never invent a donor name, amount, or campaign.',
     {
       donor_count: z.number().describe('How many donors are being thanked, e.g. 42.'),
       gift_range: z
