@@ -1,7 +1,7 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { getOrgTypeById } from '../org-types.js';
-import { buildResponseBlocks } from '../views/feedback-builder.js';
+import { buildAgentReply } from '../views/feedback-builder.js';
 
 /**
  * Shared runner for slash commands: shows a "thinking" indicator, runs the
@@ -23,7 +23,7 @@ import { buildResponseBlocks } from '../views/feedback-builder.js';
  * @returns {Promise<void>}
  */
 export async function runCommandAgent({ respond, client, command, context, prompt, logger }) {
-  await respond({ response_type: 'in_channel', text: '⏳ _Benvu is thinking…_' });
+  await respond({ response_type: 'in_channel', text: '_Benvu is thinking…_' });
 
   try {
     const userId = command.user_id;
@@ -43,7 +43,7 @@ export async function runCommandAgent({ respond, client, command, context, promp
       replace_original: true,
       response_type: 'in_channel',
       text: responseText,
-      blocks: buildResponseBlocks(responseText),
+      blocks: buildAgentReply(responseText),
     });
   } catch (e) {
     logger.error(`Slash command agent failed: ${e}`);

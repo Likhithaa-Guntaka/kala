@@ -9,7 +9,7 @@ import {
   recordFeedback,
   summarizeFeedback,
 } from '../../listeners/feedback-store.js';
-import { buildFeedbackBlocks, buildResponseBlocks } from '../../listeners/views/feedback-builder.js';
+import { buildAgentReply, buildFeedbackBlocks } from '../../listeners/views/feedback-builder.js';
 
 describe('feedback store', () => {
   it('records entries and aggregates up/down counts', () => {
@@ -29,7 +29,7 @@ describe('feedback store', () => {
 });
 
 describe('feedback buttons', () => {
-  it('renders 👍 and 👎 as real action buttons', () => {
+  it('renders text-labeled Helpful / Not helpful action buttons', () => {
     const blocks = buildFeedbackBlocks();
     const actions = blocks.find((b) => b.type === 'actions' && b.block_id === 'feedback');
     assert.ok(actions);
@@ -39,10 +39,14 @@ describe('feedback buttons', () => {
       actions.elements.map((e) => e.value),
       ['up', 'down'],
     );
+    assert.deepStrictEqual(
+      actions.elements.map((e) => e.text.text),
+      ['Helpful', 'Not helpful'],
+    );
   });
 
-  it('buildResponseBlocks chunks long text and appends feedback', () => {
-    const blocks = buildResponseBlocks('x'.repeat(6000));
+  it('buildAgentReply chunks long text and appends feedback', () => {
+    const blocks = buildAgentReply('x'.repeat(6000));
     const sections = blocks.filter((b) => b.type === 'section');
     assert.strictEqual(sections.length, 3); // 2900 + 2900 + 200
     assert.ok(blocks.some((b) => b.block_id === 'feedback'));

@@ -3,7 +3,7 @@ import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAppHomeView, CHANGE_ORG_VALUE } from '../views/app-home-builder.js';
-import { buildResponseBlocks } from '../views/feedback-builder.js';
+import { buildAgentReply } from '../views/feedback-builder.js';
 import { buildIssueModal } from '../views/issue-modal-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 
@@ -165,7 +165,7 @@ export async function handlePromptButton({ ack, body, client, context, logger })
       channel: channelId,
       thread_ts: threadTs,
       text: responseText,
-      blocks: buildResponseBlocks(responseText),
+      blocks: buildAgentReply(responseText),
     });
 
     if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);

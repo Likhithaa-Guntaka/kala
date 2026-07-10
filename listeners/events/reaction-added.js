@@ -1,7 +1,7 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { getOrgTypeById } from '../org-types.js';
-import { buildResponseBlocks } from '../views/feedback-builder.js';
+import { buildAgentReply } from '../views/feedback-builder.js';
 
 /**
  * Reactions Benvu acts on. Each maps an emoji name to either an agent prompt
@@ -86,7 +86,7 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       channel: channelId,
       thread_ts: messageTs,
       text: responseText,
-      blocks: buildResponseBlocks(responseText),
+      blocks: buildAgentReply(responseText),
     });
   } catch (e) {
     handled.delete(dedupeKey);

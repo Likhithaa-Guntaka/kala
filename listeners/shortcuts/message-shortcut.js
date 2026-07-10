@@ -1,7 +1,7 @@
 import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { getOrgTypeById } from '../org-types.js';
-import { buildResponseBlocks } from '../views/feedback-builder.js';
+import { buildAgentReply } from '../views/feedback-builder.js';
 import { buildSendToBenvuModal } from '../views/shortcut-modal-builder.js';
 
 /**
@@ -81,7 +81,7 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
       channel: channelId,
       ts: thinkingTs,
       text: responseText,
-      blocks: buildResponseBlocks(responseText),
+      blocks: buildAgentReply(responseText),
     });
   } catch (e) {
     logger.error(`Failed to process Send to Benvu submission: ${e}`);
