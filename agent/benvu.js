@@ -224,8 +224,8 @@ function seededDeadlineLine(d) {
       return `${d.title} — ${d.framing}${d.month ? ` (recurs around ${d.month} each year)` : ''}.`;
     default:
       return (
-        `${d.title} — ${d.framing}. The schedule varies by state, so offer to set a recurring reminder and ` +
-        'ask their reporting cadence rather than assuming a date.'
+        `${d.title} — ${d.framing}. The exact date varies by year and by program, so offer to set a recurring ` +
+        'reminder and ask them for the current deadline rather than assuming one.'
       );
   }
 }

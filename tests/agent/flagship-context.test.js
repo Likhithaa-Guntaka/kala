@@ -69,4 +69,28 @@ describe('flagshipContext', () => {
       assert.match(text, /do not force it|just answer normally/i);
     });
   });
+
+  describe('seeded deadlines with variable HUD dates (Housing)', () => {
+    const text = flagshipContext(getOrgTypeById('housing'));
+
+    it('offers the 990 with the stated December fiscal-year assumption', () => {
+      assert.match(text, /Form 990/);
+      assert.match(text, /December/);
+      assert.match(text, /May 15/);
+    });
+
+    it('frames HUD CoC and PIT dates as ask-the-user, never a fabricated fixed date', () => {
+      assert.match(text, /Continuum of Care|CoC/);
+      assert.match(text, /Point-in-Time|PIT/);
+      // The variable-date items must tell the agent to ask for the current deadline.
+      assert.match(text, /ask them for the current deadline/i);
+      // No hardcoded month/day for the HUD items (only the 990's May 15 is fixed).
+      assert.ok(!/January 2[0-9]|January 3[01]/.test(text), 'no fabricated PIT calendar date');
+    });
+
+    it('never instructs the agent to write a reminder without confirmation', () => {
+      assert.match(text, /never create a reminder until the user confirms/i);
+      assert.match(text, /track_deadline/);
+    });
+  });
 });

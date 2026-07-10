@@ -4,8 +4,8 @@ import { describe, it } from 'node:test';
 import { getOrgTypeById, ORG_TYPES } from '../../listeners/org-types.js';
 
 describe('ORG_TYPES', () => {
-  it('has exactly six types', () => {
-    assert.strictEqual(ORG_TYPES.length, 6);
+  it('has exactly seven types', () => {
+    assert.strictEqual(ORG_TYPES.length, 7);
   });
 
   it('each type has an id, emoji, label, primary actions, and tailored prompts', () => {

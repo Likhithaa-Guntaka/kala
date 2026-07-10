@@ -108,6 +108,43 @@ export const ORG_TYPES = [
     flagship: { kind: 'multilingual', defaultLanguages: ['Spanish'] },
   },
   {
+    id: 'housing',
+    emoji: '🏠',
+    label: 'Housing & Homelessness Services',
+    primaryActions: ['category_find_grants', 'category_track_deadline', 'category_draft_report'],
+    tailoredPrompts: [
+      'Find HUD Continuum of Care funding',
+      'Draft our point-in-time count summary',
+      'Find housing and homelessness services funding',
+    ],
+    defaultGrantCategories: ['HO', 'ISS'],
+    rtsPrompts: [
+      'Summarize what we discussed about our CoC application',
+      'Catch me up on our coordinated entry planning',
+    ],
+    flagship: {
+      kind: 'seed_deadlines',
+      deadlines: [
+        {
+          title: 'IRS Form 990',
+          rule: 'irs990',
+          framing: 'the annual IRS Form 990 information return every tax-exempt nonprofit files',
+        },
+        {
+          title: 'HUD Continuum of Care (CoC) application',
+          rule: 'state_varies',
+          framing: 'your annual HUD CoC Program application, whose NOFO deadline HUD sets fresh each year',
+        },
+        {
+          title: 'Point-in-Time (PIT) count',
+          rule: 'state_varies',
+          framing:
+            'your annual Point-in-Time count of people experiencing homelessness, scheduled locally each January',
+        },
+      ],
+    },
+  },
+  {
     id: 'arts_culture',
     emoji: '🎨',
     label: 'Arts & Culture',

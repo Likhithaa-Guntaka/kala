@@ -54,9 +54,12 @@ describe('buildAppHomeView', () => {
       assert.ok(sections.some((t) => /what kind of organization/i.test(t)));
     });
 
-    it('offers all six org types as plain buttons, none primary, no emoji labels', () => {
+    it('offers every org type as a plain button, none primary, no emoji labels', () => {
       const view = buildAppHomeView();
-      const els = [...block(view, 'org_type_select_1').elements, ...block(view, 'org_type_select_2').elements];
+      // Gather all picker rows (rows of three, so the count grows with the types).
+      const els = view.blocks
+        .filter((b) => b.type === 'actions' && String(b.block_id).startsWith('org_type_select_'))
+        .flatMap((b) => b.elements);
       assert.strictEqual(els.length, ORG_TYPES.length);
       for (const el of els) {
         assert.strictEqual(el.type, 'button');
@@ -64,7 +67,7 @@ describe('buildAppHomeView', () => {
         assert.strictEqual(el.style, undefined);
       }
       // Every picker button must render the plain org label — never the
-      // data-model emoji, and never an emoji-prefixed label. Check all six,
+      // data-model emoji, and never an emoji-prefixed label. Check all of them,
       // not just the first, so a partial regression can't slip through.
       for (const org of ORG_TYPES) {
         const btn = els.find((e) => e.action_id === `orgtype_${org.id}`);
@@ -74,7 +77,9 @@ describe('buildAppHomeView', () => {
 
     it('the org-type picker blocks contain no emoji', () => {
       const view = buildAppHomeView();
-      const picker = [block(view, 'org_type_select_1'), block(view, 'org_type_select_2')];
+      const picker = view.blocks.filter(
+        (b) => b.type === 'actions' && String(b.block_id).startsWith('org_type_select_'),
+      );
       assertNoEmoji(picker);
     });
   });
