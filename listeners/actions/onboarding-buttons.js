@@ -56,7 +56,7 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
     if (channelId) {
       await client.chat.postMessage({
         channel: channelId,
-        text: `Set up for ${org.emoji} ${org.label}.`,
+        text: `Set up for ${org.label}.`,
         blocks: buildTailoredPromptsDmBlocks(org),
       });
     }
