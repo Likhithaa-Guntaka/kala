@@ -114,4 +114,29 @@ describe('flagshipContext', () => {
       assert.match(text, /ask them for the current deadline/i);
     });
   });
+
+  describe('match tracker (Arts & Culture)', () => {
+    const text = flagshipContext(getOrgTypeById('arts_culture'));
+
+    it('is active for the arts_culture type', () => {
+      assert.strictEqual(getOrgTypeById('arts_culture').flagship.kind, 'match_tracker');
+      assert.notStrictEqual(text, '');
+    });
+
+    it('explains the NEA 1:1 nonfederal match and points at the track_match tool', () => {
+      assert.match(text, /MATCH TRACKER/);
+      assert.match(text, /NEA/);
+      assert.match(text, /1:1/);
+      assert.match(text, /nonfederal/i);
+      assert.match(text, /track_match/);
+    });
+
+    it('records the running total as an absolute, not an increment', () => {
+      assert.match(text, /not an increment/i);
+    });
+
+    it('stays latent — only surfaces when match or fundraising is in play', () => {
+      assert.match(text, /only bring it up when match or fundraising/i);
+    });
+  });
 });

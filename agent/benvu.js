@@ -15,6 +15,7 @@ import {
   PREP_BRIEFING_SCHEMA,
   summarizeMeetingTool,
 } from './tools/index.js';
+import { getMatch, matchStatus, setMatch } from './tools/match-store.js';
 import { formatWorkspaceResults, searchWorkspaceContext } from './tools/rts.js';
 
 // Authentication.
@@ -277,6 +278,21 @@ export function flagshipContext(org) {
     );
   }
 
+  if (flagship.kind === 'match_tracker') {
+    const source = flagship.source || 'NEA';
+    const ratio = flagship.ratio || '1:1';
+    return (
+      '\n\n## MATCH TRACKER (arts and culture funding match)\n' +
+      `Many arts grants — including ${source} organizational grants — require a mandatory ${ratio} nonfederal ` +
+      'match: for every federal dollar awarded, the organization must raise a dollar from non-federal sources. ' +
+      'Use the track_match tool to remember how much match this organization needs and how much it has raised, ' +
+      `and to report progress. When the user mentions a ${source} (or similar) grant amount, note that the ` +
+      'required match equals that amount and offer to track it. When they mention money raised toward the match, ' +
+      'record the new running total (an absolute total, not an increment). Always report raised versus required ' +
+      'and how much is left. This is latent: only bring it up when match or fundraising progress is actually in play.'
+    );
+  }
+
   return '';
 }
 
@@ -532,6 +548,66 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     },
   );
 
+  // Flagship tool for arts & culture: track progress toward a required nonfederal
+  // grant match (e.g. an NEA 1:1 match). State is scoped to channel+user and lives
+  // in match-store, so progress carries across conversations.
+  const trackMatchTool = tool(
+    'track_match',
+    'Track progress toward a required nonfederal grant match (for example, an NEA 1:1 match, where the ' +
+      'organization must raise a dollar for every federal dollar). Records how much match is needed and how much ' +
+      'has been raised so far, scoped to this channel, and reports raised versus required. Pass the grant amount ' +
+      'as the required match and the running total raised. Call with no arguments to just report current progress.',
+    {
+      required_match: z
+        .number()
+        .optional()
+        .describe(
+          'Total nonfederal match required, in dollars. For a 1:1 NEA match this equals the grant amount, e.g. 50000.',
+        ),
+      raised_so_far: z
+        .number()
+        .optional()
+        .describe('Total match raised so far, in dollars — the running total, not an amount to add on.'),
+      campaign: z.string().optional().describe('What the match is for, e.g. "NEA Challenge America 2026", if named.'),
+    },
+    async ({ required_match, raised_so_far, campaign }) => {
+      if (!deps?.channelId || !deps?.userId) {
+        return { content: [{ type: 'text', text: "I can't track a match here — there's no channel to tie it to." }] };
+      }
+
+      const hasInput = required_match != null || raised_so_far != null || campaign != null;
+      const record = hasInput
+        ? setMatch({
+            channelId: deps.channelId,
+            userId: deps.userId,
+            required: required_match,
+            raised: raised_so_far,
+            campaign,
+          })
+        : getMatch({ channelId: deps.channelId, userId: deps.userId });
+
+      const status = matchStatus(record);
+      if (!status) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No match is being tracked yet. Tell me the grant amount (the required 1:1 match) and I will start tracking it.',
+            },
+          ],
+        };
+      }
+
+      const usd = (/** @type {number} */ n) => `$${Math.round(n).toLocaleString('en-US')}`;
+      const forCampaign = status.campaign ? ` for *${status.campaign}*` : '';
+      const text =
+        status.required > 0
+          ? `Match${forCampaign}: raised *${usd(status.raised)}* of *${usd(status.required)}* required (${status.percent}%). ${usd(status.remaining)} to go.`
+          : `Match${forCampaign}: raised *${usd(status.raised)}* so far. Tell me the required match (the grant amount) and I'll track how much is left.`;
+      return { content: [{ type: 'text', text }] };
+    },
+  );
+
   const searchWorkspaceTool = tool(
     'search_workspace',
     "Search the team's Slack workspace in real time for messages and files relevant to a query — " +
@@ -592,6 +668,10 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     collectedDraft = draft;
   };
 
+  // track_match is a flagship tool: register it only for org types whose flagship
+  // is the match tracker (arts & culture), so the toolset stays tailored per type.
+  const hasMatchTracker = org?.flagship?.kind === 'match_tracker';
+
   const benvuToolsServer = createSdkMcpServer({
     name: 'benvu-tools',
     version: '1.0.0',
@@ -607,12 +687,14 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
       searchWorkspaceTool,
       summarizeMeetingTool,
       trackDeadlineTool,
+      ...(hasMatchTracker ? [trackMatchTool] : []),
     ],
   });
 
   /** @type {Record<string, any>} */
   const mcpServers = { 'benvu-tools': benvuToolsServer };
   const allowedTools = [...ALLOWED_TOOLS];
+  if (hasMatchTracker) allowedTools.push('track_match');
 
   if (deps?.userToken) {
     mcpServers['slack-mcp'] = {

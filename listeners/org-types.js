@@ -180,10 +180,13 @@ export const ORG_TYPES = [
     label: 'Arts & Culture',
     primaryActions: ['category_find_grants', 'category_donor_thankyou', 'category_draft_report'],
     tailoredPrompts: [
-      'Find NEA or state arts council grants',
-      'Draft an impact report for our community theater, we ran 12 shows this season',
-      'Write a donor thank you for our annual gala sponsors',
+      'Draft our Challenge America project summary (max $10K)',
+      'Draft our new season program announcement',
+      'Find arts and culture funding',
     ],
+    defaultGrantCategories: ['AR', 'HU'],
+    rtsPrompts: ["Summarize what we decided about next season's programming", 'Catch me up on our gala planning'],
+    flagship: { kind: 'match_tracker', ratio: '1:1', source: 'NEA' },
   },
   {
     id: 'general',
