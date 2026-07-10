@@ -6,6 +6,7 @@ import { buildAppHomeView } from '../views/app-home-builder.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
+import { fetchFirstName } from '../views/user-name.js';
 
 /**
  * Re-publish the App Home view for a user (reflects their current org type).
@@ -15,7 +16,8 @@ import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
  */
 async function refreshAppHome(client, context, userId) {
   const orgType = sessionStore.getOrgType(userId);
-  const view = buildAppHomeView(context.botUserId, orgType);
+  const firstName = await fetchFirstName(client, userId);
+  const view = buildAppHomeView(context.botUserId, orgType, { firstName });
   await client.views.publish({ user_id: userId, view });
 }
 

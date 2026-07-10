@@ -2,6 +2,7 @@ import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleAppHomeOpened } from '../../../listeners/events/app-home-opened.js';
+import { sessionStore } from '../../../thread-context/index.js';
 
 describe('handleAppHomeOpened', () => {
   let fakeClient;
@@ -12,6 +13,7 @@ describe('handleAppHomeOpened', () => {
     fakeClient = {
       views: { publish: mock.fn(async () => ({ ok: true })) },
       assistant: { threads: { setSuggestedPrompts: mock.fn(async () => ({ ok: true })) } },
+      users: { info: mock.fn(async () => ({ user: { profile: { first_name: 'Dedeepya' } } })) },
     };
     fakeContext = { userId: 'U123', botUserId: 'U0BOT' };
     fakeLogger = { error: mock.fn() };
@@ -36,6 +38,48 @@ describe('handleAppHomeOpened', () => {
     assert.ok(Array.isArray(callArgs.prompts));
     assert.ok(callArgs.prompts.length > 0);
     assert.strictEqual(fakeClient.views.publish.mock.callCount(), 0);
+  });
+
+  it('still publishes the home view when the name lookup fails', async () => {
+    fakeClient.users.info = mock.fn(async () => {
+      throw new Error('missing_scope');
+    });
+    const event = { tab: 'home', channel: 'D123' };
+    await handleAppHomeOpened({ client: fakeClient, event, context: fakeContext, logger: fakeLogger });
+    // A failed name fetch must not break the tab — it just greets neutrally.
+    assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+    assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
+  });
+
+  it('still publishes the home view when users.info hangs (does not block the render)', async () => {
+    // users.info never resolves — the 2s timeout in fetchFirstName must fire so
+    // the Home tab renders with a neutral greeting instead of blocking forever.
+    fakeClient.users.info = mock.fn(() => new Promise(() => {}));
+    // Onboarded state so the greeting path (not the first-open picker) renders.
+    sessionStore.setOrgType('U123', 'education');
+    mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+      const event = { tab: 'home', channel: 'D123' };
+      const pending = handleAppHomeOpened({
+        client: fakeClient,
+        event,
+        context: fakeContext,
+        logger: fakeLogger,
+      });
+      // Advance past the 2s name-fetch timeout instantly (no real wait).
+      mock.timers.tick(2001);
+      await pending;
+
+      assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+      assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
+      // Greeting fell back to the neutral form (no ", Name!").
+      const view = fakeClient.views.publish.mock.calls[0].arguments[0].view;
+      const header = view.blocks.find((b) => b.type === 'header');
+      assert.match(header.text.text, /^Good (morning|afternoon|evening)!$/);
+    } finally {
+      mock.timers.reset();
+      sessionStore.clearOrgType('U123');
+    }
   });
 
   it('logs error when views.publish fails', async () => {

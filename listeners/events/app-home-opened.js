@@ -1,5 +1,6 @@
 import { sessionStore } from '../../thread-context/index.js';
 import { buildAppHomeView } from '../views/app-home-builder.js';
+import { fetchFirstName } from '../views/user-name.js';
 
 const SUGGESTED_PROMPTS = [
   { title: 'Find Grants', message: 'Find grants for youth education in New York under $50k' },
@@ -33,7 +34,8 @@ export async function handleAppHomeOpened({ client, event, context, logger }) {
 
     const userId = /** @type {string} */ (context.userId);
     const orgType = sessionStore.getOrgType(userId);
-    const view = buildAppHomeView(context.botUserId, orgType);
+    const firstName = await fetchFirstName(client, userId);
+    const view = buildAppHomeView(context.botUserId, orgType, { firstName });
     await client.views.publish({ user_id: userId, view });
   } catch (e) {
     logger.error(`Failed to handle app_home_opened: ${e}`);
