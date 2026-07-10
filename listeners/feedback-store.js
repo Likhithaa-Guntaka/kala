@@ -95,18 +95,21 @@ export function formatFeedbackSummary() {
   const { total, up, down, positivePct, recent } = summarizeFeedback();
   if (total === 0) return '*Benvu feedback*\nNo feedback yet.';
 
-  const lines = ['*Benvu feedback summary*', `👍 ${up}   👎 ${down}   •   ${total} total (${positivePct}% positive)`];
+  const lines = [
+    '*Benvu feedback summary*',
+    `Helpful: ${up}   Not helpful: ${down}   ${total} total (${positivePct}% positive)`,
+  ];
   if (timingLog.length > 0) {
     const avg = Math.round(timingLog.reduce((sum, t) => sum + t.seconds, 0) / timingLog.length);
-    lines.push(`⏱ ${timingLog.length} timed responses, ~${avg}s average`);
+    lines.push(`${timingLog.length} timed responses, ~${avg}s average`);
   }
   if (recent.length > 0) {
     lines.push('', '*Recent:*');
     for (const f of recent) {
-      const icon = f.rating === 'up' ? '👍' : '👎';
+      const label = f.rating === 'up' ? 'Helpful' : 'Not helpful';
       const when = f.timestamp.slice(0, 10);
       const what = f.response_summary || f.message_summary || '(no summary)';
-      lines.push(`• ${icon} ${when} — ${what}`);
+      lines.push(`- ${label} · ${when} — ${what}`);
     }
   }
   return lines.join('\n');

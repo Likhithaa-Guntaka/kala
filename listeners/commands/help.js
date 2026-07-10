@@ -1,3 +1,5 @@
+import { buildHelpBlocks } from '../views/command-builder.js';
+
 export const HELP_TEXT = [
   "*Hi, I'm Benvu.* I find grants, draft reports, and track deadlines, in any language.",
   '',
@@ -17,5 +19,5 @@ export const HELP_TEXT = [
  */
 export async function handleBenvuCommand({ ack, respond }) {
   await ack();
-  await respond({ response_type: 'ephemeral', text: HELP_TEXT });
+  await respond({ response_type: 'ephemeral', text: HELP_TEXT, blocks: buildHelpBlocks() });
 }

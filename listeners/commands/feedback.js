@@ -1,4 +1,5 @@
 import { formatFeedbackSummary } from '../feedback-store.js';
+import { buildFeedbackSummaryBlocks } from '../views/command-builder.js';
 
 /**
  * /benvu-feedback — (admin) show a summary of thumbs-up/down feedback.
@@ -8,5 +9,5 @@ import { formatFeedbackSummary } from '../feedback-store.js';
  */
 export async function handleFeedbackAdminCommand({ ack, respond }) {
   await ack();
-  await respond({ response_type: 'ephemeral', text: formatFeedbackSummary() });
+  await respond({ response_type: 'ephemeral', text: formatFeedbackSummary(), blocks: buildFeedbackSummaryBlocks() });
 }
