@@ -132,4 +132,18 @@ describe('SessionStore', () => {
       assert.strictEqual(fresh.hasOnboarded('U3'), false);
     });
   });
+
+  describe('onboarding message ref', () => {
+    it('defaults to null and round-trips a stored ref', () => {
+      assert.strictEqual(store.getOnboardingMessageRef('U1'), null);
+      store.setOnboardingMessageRef('U1', { channel: 'D1', ts: '100' });
+      assert.deepStrictEqual(store.getOnboardingMessageRef('U1'), { channel: 'D1', ts: '100' });
+    });
+
+    it('overwrites the ref when re-pointed to a newer message', () => {
+      store.setOnboardingMessageRef('U1', { channel: 'D1', ts: '100' });
+      store.setOnboardingMessageRef('U1', { channel: 'D1', ts: '200' });
+      assert.deepStrictEqual(store.getOnboardingMessageRef('U1'), { channel: 'D1', ts: '200' });
+    });
+  });
 });

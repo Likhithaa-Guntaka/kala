@@ -19,6 +19,61 @@ async function refreshAppHome(client, context, userId) {
 }
 
 /**
+ * Whether our stored tailored-prompts DM is still the most recent message in that
+ * DM. If it is, we can edit it in place; otherwise the user has chatted since and
+ * we post fresh. On any error, treat it as not-latest (post fresh) rather than
+ * risk editing a message that has scrolled away.
+ * @param {import('@slack/web-api').WebClient} client
+ * @param {{ channel: string, ts: string }} ref
+ * @returns {Promise<boolean>}
+ */
+async function isOnboardingMsgStillLatest(client, ref) {
+  try {
+    const res = await client.conversations.history({ channel: ref.channel, limit: 1 });
+    return res.messages?.[0]?.ts === ref.ts;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Post the tailored-prompts DM on first onboarding, or on a later org change edit
+ * the existing message in place — unless the user has chatted since (our message
+ * is no longer the latest), in which case post a fresh one and re-point the ref.
+ *
+ * chat.update keeps the same message ts, so the prompt_run_* buttons stay wired:
+ * their action_id and value are rebuilt from the new org, and Bolt matches them by
+ * action_id regardless of the message being edited rather than replaced.
+ * @param {import('@slack/web-api').WebClient} client
+ * @param {string} userId
+ * @param {import('../org-types.js').OrgType} org
+ * @param {boolean} isFirstOnboarding
+ * @returns {Promise<void>}
+ */
+async function postOrUpdateTailoredDm(client, userId, org, isFirstOnboarding) {
+  const conversation = await client.conversations.open({ users: userId });
+  const channelId = conversation.channel?.id;
+  if (!channelId) return;
+
+  const text = `Set up for ${org.label}.`;
+  const blocks = buildTailoredPromptsDmBlocks(org);
+
+  if (!isFirstOnboarding) {
+    const ref = sessionStore.getOnboardingMessageRef(userId);
+    if (ref && (await isOnboardingMsgStillLatest(client, ref))) {
+      await client.chat.update({ channel: ref.channel, ts: ref.ts, text, blocks });
+      return;
+    }
+    // No usable ref, or the DM has moved on — fall through and post fresh.
+  }
+
+  const res = await client.chat.postMessage({ channel: channelId, text, blocks });
+  if (res.ts) {
+    sessionStore.setOnboardingMessageRef(userId, { channel: channelId, ts: /** @type {string} */ (res.ts) });
+  }
+}
+
+/**
  * Handle an org-type selection button. Stores the choice and refreshes the App
  * Home tab. On the FIRST time a user onboards (org type going from none to a real
  * value) it also sends the tailored-prompts DM; on a later change it only
@@ -59,23 +114,13 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
       // Not supported for this user/workspace — durable persistence already handled on disk.
     }
 
-    // First-time onboarding only: a follow-up DM with three tailored example
-    // prompts as native buttons. On a later org-type change, the refreshed Home
-    // tab already shows the tailored cards, so re-posting this would just clutter
-    // the DM.
-    if (isFirstOnboarding) {
-      // Mark onboarded up front so a rapid second click can't double-send the DM.
-      sessionStore.markOnboarded(userId);
-      const conversation = await client.conversations.open({ users: userId });
-      const channelId = conversation.channel?.id;
-      if (channelId) {
-        await client.chat.postMessage({
-          channel: channelId,
-          text: `Set up for ${org.label}.`,
-          blocks: buildTailoredPromptsDmBlocks(org),
-        });
-      }
-    }
+    // Mark onboarded up front so a rapid second click can't double-post the DM.
+    if (isFirstOnboarding) sessionStore.markOnboarded(userId);
+
+    // First onboarding posts the tailored-prompts DM; a later change edits that
+    // message in place (or posts fresh if the DM has since moved on) — never a
+    // silent duplicate per switch.
+    await postOrUpdateTailoredDm(client, userId, org, isFirstOnboarding);
 
     await refreshAppHome(client, context, userId);
   } catch (e) {

@@ -25,9 +25,18 @@ describe('onboarding action handlers', () => {
   beforeEach(() => {
     fakeAck = mock.fn(async () => {});
     fakeClient = {
-      conversations: { open: mock.fn(async () => ({ channel: { id: 'D1' } })) },
-      chat: { postMessage: mock.fn(async () => ({ ok: true, ts: '1.1' })) },
+      conversations: {
+        open: mock.fn(async () => ({ channel: { id: 'D1' } })),
+        // Default: the latest message in the DM is our just-posted onboarding msg,
+        // so a re-switch edits it in place. Individual tests override this.
+        history: mock.fn(async () => ({ messages: [{ ts: '1.1' }] })),
+      },
+      chat: {
+        postMessage: mock.fn(async () => ({ ok: true, ts: '1.1' })),
+        update: mock.fn(async () => ({ ok: true })),
+      },
       views: { publish: mock.fn(async () => ({ ok: true })), open: mock.fn(async () => ({ ok: true })) },
+      users: { info: mock.fn(async () => ({ user: { profile: { first_name: 'Dee' } } })) },
     };
     fakeContext = { botUserId: 'U0BOT', userToken: undefined };
     fakeLogger = { error: mock.fn(), info: mock.fn() };
@@ -63,11 +72,27 @@ describe('onboarding action handlers', () => {
       assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 0);
     });
 
-    it('sends the DM once across repeated Change-org-type switches (regression)', async () => {
-      // Models the real UI path that broke live: switching org type goes through
-      // "Change organization type", which clears the org type to null before the
-      // user re-picks. Only the first-ever selection should DM.
-      const U = 'USWITCH';
+    it('first onboarding posts a new tailored DM and stores its message ref', async () => {
+      const U = 'UFIRST';
+      await handleOrgTypeSelected({
+        ack: fakeAck,
+        body: { user: { id: U }, actions: [{ value: 'food_bank' }] },
+        client: fakeClient,
+        context: fakeContext,
+        logger: fakeLogger,
+      });
+
+      assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
+      assert.strictEqual(fakeClient.chat.update.mock.callCount(), 0);
+      assert.strictEqual(
+        fakeClient.chat.postMessage.mock.calls[0].arguments[0].text,
+        'Set up for Food Bank / Basic Needs.',
+      );
+      assert.deepStrictEqual(sessionStore.getOnboardingMessageRef(U), { channel: 'D1', ts: '1.1' });
+    });
+
+    it('re-switch with no other DM activity edits the message in place; ref ts unchanged', async () => {
+      const U = 'UEDIT';
       const select = (value) =>
         handleOrgTypeSelected({
           ack: fakeAck,
@@ -85,20 +110,64 @@ describe('onboarding action handlers', () => {
           logger: fakeLogger,
         });
 
-      await select('food_bank'); // first onboarding -> DM
-      await change(); // clears org type to null
-      await select('mental_health'); // a change, NOT first onboarding -> no DM
+      await select('food_bank'); // posts, ref -> ts 1.1
       await change();
-      await select('education'); // still a change -> no DM
+      await select('education'); // our msg (1.1) is still latest -> update in place
+      await change();
+      await select('mental_health'); // still latest -> update again
 
-      assert.strictEqual(sessionStore.getOrgType(U), 'education');
-      assert.ok(sessionStore.hasOnboarded(U), 'user stays onboarded through changes');
-      // Exactly one tailored DM across the whole sequence — the original intent.
+      assert.strictEqual(sessionStore.getOrgType(U), 'mental_health');
+      // Posted exactly once; every later switch was an in-place edit — no duplicates.
       assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
+      assert.strictEqual(fakeClient.chat.update.mock.callCount(), 2);
+      const lastUpdate = fakeClient.chat.update.mock.calls.at(-1).arguments[0];
+      assert.strictEqual(lastUpdate.channel, 'D1');
+      assert.strictEqual(lastUpdate.ts, '1.1'); // same message edited, ts unchanged
+      assert.strictEqual(lastUpdate.text, 'Set up for Mental Health / Crisis Support.');
+      const promptBlock = lastUpdate.blocks.find((b) => b.block_id === 'tailored_prompts');
+      assert.strictEqual(promptBlock.elements.length, 3); // prompt_run_* buttons still present
+      // Ref still points at the same message.
+      assert.deepStrictEqual(sessionStore.getOnboardingMessageRef(U), { channel: 'D1', ts: '1.1' });
+    });
+
+    it('re-switch after other DM activity posts a fresh message and re-points the ref', async () => {
+      const U = 'UFRESH';
+      // First post returns ts 100; a later fresh post returns ts 200.
+      let n = 0;
+      fakeClient.chat.postMessage = mock.fn(async () => ({ ok: true, ts: n++ === 0 ? '100' : '200' }));
+      // The DM has moved on: the latest message is NOT our onboarding message.
+      fakeClient.conversations.history = mock.fn(async () => ({ messages: [{ ts: '150' }] }));
+
+      const select = (value) =>
+        handleOrgTypeSelected({
+          ack: fakeAck,
+          body: { user: { id: U }, actions: [{ value }] },
+          client: fakeClient,
+          context: fakeContext,
+          logger: fakeLogger,
+        });
+      const change = () =>
+        handleChangeOrgType({
+          ack: fakeAck,
+          body: { user: { id: U } },
+          client: fakeClient,
+          context: fakeContext,
+          logger: fakeLogger,
+        });
+
+      await select('food_bank'); // posts, ref -> ts 100
+      assert.deepStrictEqual(sessionStore.getOnboardingMessageRef(U), { channel: 'D1', ts: '100' });
+
+      await change();
+      await select('education'); // latest (150) != ref (100) -> post fresh, ref -> 200
+
+      assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 2);
+      assert.strictEqual(fakeClient.chat.update.mock.callCount(), 0);
       assert.strictEqual(
-        fakeClient.chat.postMessage.mock.calls[0].arguments[0].text,
-        'Set up for Food Bank / Basic Needs.',
+        fakeClient.chat.postMessage.mock.calls[1].arguments[0].text,
+        'Set up for Education / Youth Programs.',
       );
+      assert.deepStrictEqual(sessionStore.getOnboardingMessageRef(U), { channel: 'D1', ts: '200' });
     });
 
     it('Home shows the NEW org after a switch even if the first refresh is slow (race regression)', async () => {

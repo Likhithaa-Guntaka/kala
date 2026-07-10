@@ -32,6 +32,12 @@ export class SessionStore {
      * @private @type {Set<string>}
      */
     this._onboarded = new Set();
+    /**
+     * Per-user reference to the tailored-prompts onboarding DM, so a later org
+     * change edits it in place instead of posting a duplicate. In-memory only.
+     * @private @type {Map<string, { channel: string, ts: string }>}
+     */
+    this._onboardingMsgRef = new Map();
     /** @private @type {number} */
     this._ttlSeconds = ttlSeconds;
     /** @private @type {number} */
@@ -85,6 +91,28 @@ export class SessionStore {
    */
   markOnboarded(userId) {
     this._onboarded.add(userId);
+  }
+
+  /**
+   * Remember the tailored-prompts onboarding DM for a user, so a later org-type
+   * change can edit it in place (chat.update) instead of posting a duplicate.
+   * @param {string} userId
+   * @param {{ channel: string, ts: string }} ref
+   * @returns {void}
+   */
+  setOnboardingMessageRef(userId, ref) {
+    this._onboardingMsgRef.set(userId, ref);
+  }
+
+  /**
+   * The stored tailored-prompts DM ref for a user, or null. In-memory only: after
+   * a restart this is empty, so the next change posts a fresh message rather than
+   * editing one we no longer remember.
+   * @param {string} userId
+   * @returns {{ channel: string, ts: string } | null}
+   */
+  getOnboardingMessageRef(userId) {
+    return this._onboardingMsgRef.get(userId) ?? null;
   }
 
   /**
