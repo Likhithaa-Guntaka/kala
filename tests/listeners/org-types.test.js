@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { getOrgTypeById, ORG_TYPES, orgTypeLabel } from '../../listeners/org-types.js';
+import { getOrgTypeById, ORG_TYPES } from '../../listeners/org-types.js';
 
 describe('ORG_TYPES', () => {
   it('has exactly six types', () => {
@@ -33,15 +33,5 @@ describe('getOrgTypeById', () => {
     assert.strictEqual(getOrgTypeById('nope'), undefined);
     assert.strictEqual(getOrgTypeById(null), undefined);
     assert.strictEqual(getOrgTypeById(undefined), undefined);
-  });
-});
-
-describe('orgTypeLabel', () => {
-  it('returns an emoji + label string', () => {
-    assert.strictEqual(orgTypeLabel('food_bank'), '🍎 Food Bank / Basic Needs');
-  });
-
-  it('returns null for unknown ids', () => {
-    assert.strictEqual(orgTypeLabel('nope'), null);
   });
 });

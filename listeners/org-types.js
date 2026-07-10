@@ -91,13 +91,3 @@ export const ORG_TYPE_ACTION_PREFIX = 'orgtype_';
 export function getOrgTypeById(id) {
   return ORG_TYPES.find((t) => t.id === id);
 }
-
-/**
- * Human-readable label with emoji, e.g. "📚 Education / Youth Programs".
- * @param {string | null | undefined} id
- * @returns {string | null}
- */
-export function orgTypeLabel(id) {
-  const t = getOrgTypeById(id);
-  return t ? `${t.emoji} ${t.label}` : null;
-}

@@ -5,12 +5,7 @@ import { handleDeadlineDone, handleDeadlineSnooze } from './deadline-buttons.js'
 import { handleFeedbackButton, handleFeedbackDownSubmit } from './feedback-buttons.js';
 import { handleGrantTrackDeadline } from './grant-buttons.js';
 import { handleIssueButton } from './issue-buttons.js';
-import {
-  handleChangeOrgType,
-  handleMoreActionsSelect,
-  handleOrgTypeSelected,
-  handlePromptButton,
-} from './onboarding-buttons.js';
+import { handleChangeOrgType, handleOrgTypeSelected, handlePromptButton } from './onboarding-buttons.js';
 
 /**
  * Register action listeners with the Bolt app. The 👎 comment modal's submission
@@ -24,7 +19,6 @@ export function register(app) {
   app.view('feedback_down_submit', handleFeedbackDownSubmit);
   app.action(/^orgtype_/, handleOrgTypeSelected);
   app.action(CHANGE_ORG_ACTION, handleChangeOrgType);
-  app.action('more_actions_select', handleMoreActionsSelect);
   app.action(/^prompt_run_/, handlePromptButton);
   app.action(DEADLINE_DONE_ACTION, handleDeadlineDone);
   app.action(DEADLINE_SNOOZE_ACTION, handleDeadlineSnooze);
