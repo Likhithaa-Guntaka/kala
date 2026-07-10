@@ -237,7 +237,7 @@ function seededDeadlineLine(d) {
  * @param {import('../listeners/org-types.js').OrgType | undefined} org
  * @returns {string}
  */
-function flagshipContext(org) {
+export function flagshipContext(org) {
   const flagship = org?.flagship;
   if (!flagship || flagship.kind === 'none') return '';
 
@@ -248,6 +248,19 @@ function flagshipContext(org) {
       'This organization has recurring compliance deadlines. When it is relevant, you may proactively OFFER ' +
       'to track these — but never create a reminder until the user confirms, and always use track_deadline to ' +
       `set one (it is the only way a reminder is saved). Do not silently assume any date.\n${lines}`
+    );
+  }
+
+  if (flagship.kind === 'privacy_mode') {
+    return (
+      '\n\n## PRIVACY-AWARE MODE (crisis and client-sensitive work)\n' +
+      'This organization supports people in crisis and handles sensitive client information. Before you draft ' +
+      'or repeat back anything that could contain client identifiers — a name, date of birth, contact detail, ' +
+      'case note, diagnosis, or anything that could identify a specific person — stop and warn the user first, ' +
+      'and default to redaction: replace each identifier with a clear placeholder like [client name] or [date]. ' +
+      'Keep only the details the work actually needs, and never store or echo client identifiers you were not ' +
+      'asked to use. If a request appears to include real client details, point that out and offer a redacted ' +
+      'version. This never blocks the work — it protects the people they serve.'
     );
   }
 

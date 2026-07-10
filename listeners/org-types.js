@@ -68,10 +68,16 @@ export const ORG_TYPES = [
     label: 'Mental Health / Crisis Support',
     primaryActions: ['category_find_grants', 'category_track_deadline', 'category_draft_report'],
     tailoredPrompts: [
-      'Find mental health crisis funding in my state',
-      'Draft an impact report for our crisis hotline, we handled 200 calls this quarter',
-      'Set a reminder for our SAMHSA grant report due August 30',
+      'Find SAMHSA block-grant deadlines for our state',
+      'Draft a sustainability plan section for our grant renewal',
+      'Find mental health and crisis funding',
     ],
+    defaultGrantCategories: ['HL', 'ISS'],
+    rtsPrompts: [
+      'Summarize what our team decided about our crisis response protocol',
+      'Catch me up on our SAMHSA renewal discussion',
+    ],
+    flagship: { kind: 'privacy_mode' },
   },
   {
     id: 'education',
