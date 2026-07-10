@@ -2,7 +2,14 @@ import assert from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { getOrgTypeById, ORG_TYPES } from '../../../listeners/org-types.js';
-import { buildAppHomeView, CATEGORIES, CHANGE_ORG_VALUE, TAGLINE } from '../../../listeners/views/app-home-builder.js';
+import {
+  buildAppHomeView,
+  CATEGORIES,
+  CHANGE_ORG_ACTION,
+  CHANGE_ORG_VALUE,
+  TAGLINE,
+} from '../../../listeners/views/app-home-builder.js';
+import { assertNoEmoji } from '../../helpers/no-emoji.js';
 
 /** @param {any} view @param {string} id */
 function block(view, id) {
@@ -14,84 +21,91 @@ function blocksOfType(view, type) {
 }
 
 describe('buildAppHomeView', () => {
-  it('has a clean header, the tagline, and no wave emoji', () => {
+  it('leads with a header naming Benvu and a purpose section', () => {
     const view = buildAppHomeView();
     assert.strictEqual(view.type, 'home');
-    const header = view.blocks.find((b) => b.type === 'header');
-    assert.strictEqual(header.text.text, "Hi, I'm Benvu");
-    assert.ok(!header.text.text.includes('👋'));
+    const h = view.blocks.find((b) => b.type === 'header');
+    assert.strictEqual(h.text.text, 'Benvu');
 
-    const contexts = blocksOfType(view, 'context').map((b) => b.elements[0].text);
-    assert.ok(contexts.includes(TAGLINE));
+    const sections = blocksOfType(view, 'section').map((b) => b.text.text);
+    assert.ok(sections.includes(TAGLINE));
     assert.ok(TAGLINE.includes('any language'));
-    assert.ok(!TAGLINE.includes('AI teammate'));
   });
 
-  it('uses at most one divider in either state', () => {
-    for (const orgType of [null, 'education']) {
-      assert.ok(blocksOfType(buildAppHomeView(null, orgType), 'divider').length <= 1);
-    }
+  it('never contains emoji in either state', () => {
+    assertNoEmoji(buildAppHomeView());
+    assertNoEmoji(buildAppHomeView(null, 'food_bank'));
   });
 
   describe('first open (no org type)', () => {
-    it('shows only the org-type picker — no quick actions, no footer', () => {
+    it('shows a setup prompt and the org-type picker, no action grid', () => {
       const view = buildAppHomeView();
       assert.ok(block(view, 'org_type_select_1'));
       assert.ok(block(view, 'org_type_select_2'));
-      assert.ok(!block(view, 'primary_actions'), 'no action buttons on first open');
-      assert.ok(!block(view, 'quick_actions'), 'no six-button grid on first open');
+      assert.ok(!block(view, 'quick_actions_1'), 'no action grid before onboarding');
+      const sections = blocksOfType(view, 'section').map((b) => b.text.text);
+      assert.ok(sections.some((t) => /what kind of organization/i.test(t)));
     });
 
-    it('offers all six org types, none styled primary', () => {
+    it('offers all six org types as plain buttons, none primary, no emoji labels', () => {
       const view = buildAppHomeView();
       const els = [...block(view, 'org_type_select_1').elements, ...block(view, 'org_type_select_2').elements];
       assert.strictEqual(els.length, ORG_TYPES.length);
       for (const el of els) {
+        assert.strictEqual(el.type, 'button');
         assert.ok(el.action_id.startsWith('orgtype_'));
         assert.strictEqual(el.style, undefined);
       }
+      // Labels are the plain org label, without the data-model emoji.
+      const org = ORG_TYPES[0];
+      const btn = els.find((e) => e.action_id === `orgtype_${org.id}`);
+      assert.strictEqual(btn.text.text, org.label);
     });
   });
 
   describe('after onboarding', () => {
-    it('shows the org type primary actions, exactly one styled primary', () => {
-      const org = getOrgTypeById('mental_health');
+    it('renders all six actions across tidy rows, exactly one primary', () => {
       const view = buildAppHomeView(null, 'mental_health');
-      const actions = block(view, 'primary_actions');
-      assert.ok(actions);
+      const rows = [block(view, 'quick_actions_1'), block(view, 'quick_actions_2')].filter(Boolean);
+      const buttons = rows.flatMap((r) => r.elements);
+      assert.strictEqual(buttons.length, CATEGORIES.length);
+      assert.ok(rows.every((r) => r.elements.length <= 10));
 
-      const buttons = actions.elements.filter((e) => e.type === 'button');
-      assert.strictEqual(buttons.length, org.primaryActions.length);
-      assert.deepStrictEqual(
-        buttons.map((b) => b.action_id),
-        org.primaryActions,
-      );
-      assert.strictEqual(buttons.filter((b) => b.style === 'primary').length, 1);
+      const primaries = buttons.filter((b) => b.style === 'primary');
+      assert.strictEqual(primaries.length, 1);
       assert.strictEqual(buttons[0].style, 'primary');
       assert.ok(!buttons.some((b) => b.style === 'danger'));
+
+      // Action IDs are preserved so the existing category_* modal handler still fires.
+      for (const b of buttons) assert.ok(b.action_id.startsWith('category_'));
     });
 
-    it('tucks the remaining actions + change-org into a single select menu', () => {
-      const org = getOrgTypeById('mental_health');
-      const view = buildAppHomeView(null, 'mental_health');
-      const select = block(view, 'primary_actions').elements.find((e) => e.type === 'static_select');
-      assert.ok(select);
-      assert.strictEqual(select.action_id, 'more_actions_select');
-      assert.ok(select.placeholder.text.includes('More things I can help with'));
-
-      const actionOpts = select.option_groups[0].options.map((o) => o.value);
-      const expected = CATEGORIES.filter((c) => !org.primaryActions.includes(c.actionId)).map((c) => c.value);
-      assert.deepStrictEqual(actionOpts, expected);
-
-      const settingsOpts = select.option_groups[1].options.map((o) => o.value);
-      assert.deepStrictEqual(settingsOpts, [CHANGE_ORG_VALUE]);
-    });
-
-    it('shows a low-emphasis "Set up for" line and never re-shows the picker', () => {
+    it('orders the org type primary actions first', () => {
+      const org = getOrgTypeById('food_bank');
       const view = buildAppHomeView(null, 'food_bank');
+      const buttons = [...block(view, 'quick_actions_1').elements, ...block(view, 'quick_actions_2').elements];
+      assert.deepStrictEqual(
+        buttons.slice(0, org.primaryActions.length).map((b) => b.action_id),
+        org.primaryActions,
+      );
+    });
+
+    it('shows an org-tailored context line and a "how to reach me" footer', () => {
+      const org = getOrgTypeById('education');
+      const view = buildAppHomeView(null, 'education');
       const contexts = blocksOfType(view, 'context').map((b) => b.elements[0].text);
-      assert.ok(contexts.some((t) => t.includes('Set up for: 🍎 Food Bank / Basic Needs')));
-      assert.ok(!block(view, 'org_type_select_1'), 'picker is not shown again');
+      assert.ok(contexts.some((t) => t.includes(org.label)));
+      assert.ok(contexts.some((t) => /direct message/i.test(t) && /mention/i.test(t)));
+      assert.ok(!block(view, 'org_type_select_1'), 'picker is not shown after onboarding');
+    });
+
+    it('offers a change-organization button wired to the handler', () => {
+      const view = buildAppHomeView(null, 'general');
+      const settings = block(view, 'org_settings');
+      assert.ok(settings);
+      assert.strictEqual(settings.elements[0].action_id, CHANGE_ORG_ACTION);
+      assert.strictEqual(settings.elements[0].value, CHANGE_ORG_VALUE);
+      assert.strictEqual(settings.elements[0].style, undefined);
     });
 
     it('gives every org type 2-3 primary actions that exist in CATEGORIES', () => {

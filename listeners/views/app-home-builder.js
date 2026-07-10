@@ -1,4 +1,5 @@
 import { getOrgTypeById, ORG_TYPES } from '../org-types.js';
+import { actions, button, context, divider, header, section } from './kit.js';
 
 /**
  * @typedef {Object} Category
@@ -7,11 +8,14 @@ import { getOrgTypeById, ORG_TYPES } from '../org-types.js';
  * @property {string} value
  */
 
-/** One line describing what Benvu does. */
+/** One line describing what Benvu does (the Home purpose line). */
 export const TAGLINE = 'Finds grants, drafts reports, and tracks deadlines, in any language.';
 
-/** Value used by the "More" menu to reopen the org-type picker. */
+/** Value carried by the "Change organization type" control. */
 export const CHANGE_ORG_VALUE = '__change_org_type__';
+
+/** Action ID for the "Change organization type" button. */
+export const CHANGE_ORG_ACTION = 'change_org_type';
 
 /** The full set of actions Benvu can take from the Home tab. */
 /** @type {Category[]} */
@@ -28,84 +32,74 @@ export const CATEGORIES = [
   },
 ];
 
-/** @param {string} actionId */
-function categoryByActionId(actionId) {
-  return CATEGORIES.find((c) => c.actionId === actionId);
+/** How people can reach Benvu, shown as a footer context line. */
+const REACH_LINE =
+  'Reach me anytime: send a direct message, mention @Benvu in a channel, or use /grant, /report, or /deadline.';
+
+/**
+ * Order the six actions with this org type's most-used ones first, so the
+ * primary button is the action they're most likely to want.
+ * @param {import('../org-types.js').OrgType} org
+ * @returns {Category[]}
+ */
+function orderedActions(org) {
+  const primary = org.primaryActions.map((id) => CATEGORIES.find((c) => c.actionId === id)).filter(Boolean);
+  const rest = CATEGORIES.filter((c) => !org.primaryActions.includes(c.actionId));
+  return /** @type {Category[]} */ ([...primary, ...rest]);
 }
 
 /**
- * Org-type picker: two rows of three plain buttons. No primary style — the six
- * choices are equally weighted, so emphasizing one would be arbitrary.
+ * The six action buttons, laid out as tidy rows of three. The single most-used
+ * action is styled primary; the rest are default. Button text carries meaning —
+ * no icons.
+ * @param {import('../org-types.js').OrgType} org
  * @returns {import('@slack/types').ActionsBlock[]}
  */
-function orgTypeRows() {
+function quickActionRows(org) {
+  const ordered = orderedActions(org);
+  const buttons = ordered.map((cat, i) =>
+    button({
+      text: cat.text,
+      actionId: cat.actionId,
+      value: cat.value,
+      // Exactly one primary button: the clearest next action.
+      ...(i === 0 ? { style: 'primary' } : {}),
+    }),
+  );
+
+  /** @type {import('@slack/types').ActionsBlock[]} */
   const rows = [];
-  for (let i = 0; i < ORG_TYPES.length; i += 3) {
-    rows.push(
-      /** @type {import('@slack/types').ActionsBlock} */ ({
-        type: 'actions',
-        block_id: `org_type_select_${i / 3 + 1}`,
-        elements: ORG_TYPES.slice(i, i + 3).map((t) => ({
-          type: 'button',
-          text: { type: 'plain_text', text: `${t.emoji} ${t.label}`, emoji: true },
-          action_id: `orgtype_${t.id}`,
-          value: t.id,
-        })),
-      }),
-    );
+  for (let i = 0; i < buttons.length; i += 3) {
+    rows.push(actions(`quick_actions_${i / 3 + 1}`, buttons.slice(i, i + 3)));
   }
   return rows;
 }
 
 /**
- * The primary action row for an org type: its most-used actions as buttons (the
- * first styled "primary" as the single clear next step), plus a select menu
- * holding everything else and the option to change org type.
- * @param {import('../org-types.js').OrgType} org
- * @returns {import('@slack/types').ActionsBlock}
+ * The org-type picker shown on first open: rows of three plain buttons. None is
+ * styled primary — the six choices are equally weighted.
+ * @returns {import('@slack/types').ActionsBlock[]}
  */
-function primaryActionsBlock(org) {
-  const primary = org.primaryActions.map(categoryByActionId).filter(Boolean);
-  const remaining = CATEGORIES.filter((c) => !org.primaryActions.includes(c.actionId));
-
-  /** @type {any[]} */
-  const elements = primary.map((cat, i) => ({
-    type: 'button',
-    text: { type: 'plain_text', text: /** @type {Category} */ (cat).text, emoji: true },
-    action_id: /** @type {Category} */ (cat).actionId,
-    value: /** @type {Category} */ (cat).value,
-    // Exactly one primary button per view — the most important next action.
-    ...(i === 0 ? { style: 'primary' } : {}),
-  }));
-
-  elements.push({
-    type: 'static_select',
-    action_id: 'more_actions_select',
-    placeholder: { type: 'plain_text', text: 'More things I can help with', emoji: true },
-    option_groups: [
-      {
-        label: { type: 'plain_text', text: 'Actions' },
-        options: remaining.map((c) => ({ text: { type: 'plain_text', text: c.text }, value: c.value })),
-      },
-      {
-        label: { type: 'plain_text', text: 'Settings' },
-        options: [{ text: { type: 'plain_text', text: 'Change organization type' }, value: CHANGE_ORG_VALUE }],
-      },
-    ],
-  });
-
-  return { type: 'actions', block_id: 'primary_actions', elements };
+function orgTypeRows() {
+  /** @type {import('@slack/types').ActionsBlock[]} */
+  const rows = [];
+  for (let i = 0; i < ORG_TYPES.length; i += 3) {
+    const buttons = ORG_TYPES.slice(i, i + 3).map((t) =>
+      button({ text: t.label, actionId: `orgtype_${t.id}`, value: t.id }),
+    );
+    rows.push(actions(`org_type_select_${i / 3 + 1}`, buttons));
+  }
+  return rows;
 }
 
 /**
  * Build the App Home view.
  *
- * First open (no org type): greeting + the org-type picker, and nothing else.
- * After onboarding: greeting + 2-3 primary actions, a "More" menu for the rest,
- * and a low-emphasis line showing which org type is set.
+ * First open (no org type): name, purpose, a friendly setup prompt, and the
+ * org-type picker. After onboarding: name, purpose, an org-tailored context
+ * line, the six actions, a way to change org type, and a "how to reach me" line.
  *
- * @param {string | null} [_botUserId] - Unused since the footer was removed; kept so
- *   existing call sites (app-home-opened, refreshAppHome) stay unchanged.
+ * @param {string | null} [_botUserId] - Unused; kept so existing call sites stay unchanged.
  * @param {string | null} [orgType] - The user's stored org type id, if any.
  * @returns {import('@slack/types').HomeView}
  */
@@ -113,25 +107,28 @@ export function buildAppHomeView(_botUserId = null, orgType = null) {
   const org = getOrgTypeById(orgType);
 
   /** @type {import('@slack/types').KnownBlock[]} */
-  const blocks = [
-    { type: 'header', text: { type: 'plain_text', text: "Hi, I'm Benvu" } },
-    { type: 'context', elements: [{ type: 'mrkdwn', text: TAGLINE }] },
-    { type: 'divider' },
-  ];
+  const blocks = [header('Benvu'), section(TAGLINE)];
 
   if (!org) {
-    // First open — ask once, show nothing else.
-    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: 'What kind of organization are you?' } });
+    // First open — one clear setup question, then the picker.
+    blocks.push(divider());
+    blocks.push(section('First, what kind of organization are you? Pick one so I can tailor my suggestions.'));
     blocks.push(...orgTypeRows());
+    blocks.push(context('You can also just message me anytime, in any language.'));
     return { type: 'home', blocks };
   }
 
-  // Onboarded — one clear next step, the rest tucked into a menu.
-  blocks.push(primaryActionsBlock(org));
-  blocks.push({
-    type: 'context',
-    elements: [{ type: 'mrkdwn', text: `Set up for: ${org.emoji} ${org.label}` }],
-  });
+  // Onboarded — tailored context, the six actions, change-org, and reach line.
+  blocks.push(context(`Tailored for ${org.label}.`));
+  blocks.push(divider());
+  blocks.push(...quickActionRows(org));
+  blocks.push(
+    actions('org_settings', [
+      button({ text: 'Change organization type', actionId: CHANGE_ORG_ACTION, value: CHANGE_ORG_VALUE }),
+    ]),
+  );
+  blocks.push(divider());
+  blocks.push(context(REACH_LINE));
 
   return { type: 'home', blocks };
 }

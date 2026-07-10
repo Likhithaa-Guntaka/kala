@@ -68,9 +68,30 @@ export async function handleOrgTypeSelected({ ack, body, client, context, logger
 }
 
 /**
+ * Handle the App Home "Change organization type" button: clear the stored type
+ * and re-render the onboarding picker.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * @returns {Promise<void>}
+ */
+export async function handleChangeOrgType({ ack, body, client, context, logger }) {
+  await ack();
+
+  try {
+    const userId = body.user.id;
+    sessionStore.clearOrgType(userId);
+    await refreshAppHome(client, context, userId);
+  } catch (e) {
+    logger.error(`Failed to change org type: ${e}`);
+  }
+}
+
+/**
  * Handle the App Home "More things I can help with" select. Picking an action
  * opens the usual issue modal; picking "Change organization type" clears the
  * stored type and re-renders the onboarding picker.
+ *
+ * Retained for older Home views that may still render the select; the current
+ * Home uses six action buttons plus a "Change organization type" button.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockStaticSelectAction>} args
  * @returns {Promise<void>}
  */
