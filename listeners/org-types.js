@@ -96,10 +96,16 @@ export const ORG_TYPES = [
     label: 'Immigrant & Refugee Services',
     primaryActions: ['category_find_grants', 'category_draft_report', 'category_volunteer_announcement'],
     tailoredPrompts: [
-      'Find refugee resettlement funding',
-      'Translate this program announcement to Spanish',
-      'Draft an impact report for our ESL program, 80 families completed courses',
+      'Summarize this client intake and translate it to Spanish',
+      'Draft know-your-rights info for a community post',
+      'Find refugee and immigrant services funding',
     ],
+    defaultGrantCategories: ['ISS', 'CD', 'ELT'],
+    rtsPrompts: [
+      'Catch me up on what the team decided about our new arrivals plan',
+      'Summarize what we discussed about language-access services',
+    ],
+    flagship: { kind: 'multilingual', defaultLanguages: ['Spanish'] },
   },
   {
     id: 'arts_culture',

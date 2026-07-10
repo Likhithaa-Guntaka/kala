@@ -46,4 +46,27 @@ describe('flagshipContext', () => {
       assert.match(text, /never blocks the work/i);
     });
   });
+
+  describe('multilingual-first (Immigrant & Refugee)', () => {
+    const text = flagshipContext(getOrgTypeById('immigrant_refugee'));
+
+    it('is active for the immigrant_refugee type', () => {
+      assert.strictEqual(getOrgTypeById('immigrant_refugee').flagship.kind, 'multilingual');
+      assert.notStrictEqual(text, '');
+    });
+
+    it('makes summarize-then-translate the default framing for client-facing material', () => {
+      assert.match(text, /MULTILINGUAL-FIRST/);
+      assert.match(text, /summarize/i);
+      assert.match(text, /translate/i);
+    });
+
+    it('asks which language rather than assuming one', () => {
+      assert.match(text, /asking which language|which language if you are not sure/i);
+    });
+
+    it('stays latent — plain internal requests get a normal answer, not forced translation', () => {
+      assert.match(text, /do not force it|just answer normally/i);
+    });
+  });
 });

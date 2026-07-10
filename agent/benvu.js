@@ -264,6 +264,18 @@ export function flagshipContext(org) {
     );
   }
 
+  if (flagship.kind === 'multilingual') {
+    return (
+      '\n\n## MULTILINGUAL-FIRST (immigrant and refugee services)\n' +
+      'The people this organization serves often speak languages other than English, so language access is part ' +
+      'of the work. When the user shares a client intake, a notice, or anything meant to reach the people they ' +
+      'serve, treat "summarize, then offer a translation" as the natural default: give the summary, then offer ' +
+      'to translate it into the language the family speaks — asking which language if you are not sure, rather ' +
+      'than assuming one. For plain internal requests that clearly do not need translation, just answer normally; ' +
+      'do not force it. Use your own multilingual ability — there is no separate translation tool.'
+    );
+  }
+
   return '';
 }
 
