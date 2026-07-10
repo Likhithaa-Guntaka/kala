@@ -20,13 +20,13 @@ describe('suggestedPromptsForOrg', () => {
     assert.deepStrictEqual(prompts, GENERIC_SUGGESTED_PROMPTS);
   });
 
-  it("tailors prompts to a known org type, reusing that org's prompt copy", () => {
+  it("tailors prompts to a known org type, reusing that org's tailored prompt copy", () => {
     const { prompts } = suggestedPromptsForOrg('education');
     const org = getOrgTypeById('education');
-    // Each org prompt string becomes both the card title and the sent message.
+    // Each tailored prompt string becomes both the card title and the sent message.
     assert.deepStrictEqual(
       prompts,
-      org.prompts.slice(0, 4).map((message) => ({ title: message, message })),
+      org.tailoredPrompts.slice(0, 4).map((message) => ({ title: message, message })),
     );
   });
 

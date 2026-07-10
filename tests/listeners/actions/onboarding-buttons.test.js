@@ -86,7 +86,7 @@ describe('onboarding action handlers', () => {
       assert.strictEqual(fakeClient.chat.update.mock.callCount(), 0);
       assert.strictEqual(
         fakeClient.chat.postMessage.mock.calls[0].arguments[0].text,
-        'Set up for Food Bank / Basic Needs.',
+        'Set up for Food Bank / Food & Nutrition.',
       );
       assert.deepStrictEqual(sessionStore.getOnboardingMessageRef(U), { channel: 'D1', ts: '1.1' });
     });

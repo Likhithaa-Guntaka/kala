@@ -38,7 +38,7 @@ describe('buildPromptActionsBlock', () => {
     assert.strictEqual(b.elements.length, 3);
     b.elements.forEach((el, i) => {
       assert.strictEqual(el.action_id, `${PROMPT_ACTION_PREFIX}${i}`);
-      assert.strictEqual(el.value, org.prompts[i]);
+      assert.strictEqual(el.value, org.tailoredPrompts[i]);
       assert.ok(el.text.text.length <= 75);
     });
     assertNoEmoji(b);

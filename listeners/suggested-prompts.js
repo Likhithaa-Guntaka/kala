@@ -28,7 +28,7 @@ export const GENERIC_SUGGESTED_PROMPTS = [
 export function suggestedPromptsForOrg(orgTypeId) {
   const org = getOrgTypeById(orgTypeId);
   const prompts = org
-    ? org.prompts.slice(0, 4).map((message) => ({ title: message, message }))
+    ? org.tailoredPrompts.slice(0, 4).map((message) => ({ title: message, message }))
     : GENERIC_SUGGESTED_PROMPTS.slice(0, 4);
   return { title: SUGGESTED_PROMPTS_TITLE, prompts };
 }

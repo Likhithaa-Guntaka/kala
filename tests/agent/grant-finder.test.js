@@ -63,6 +63,60 @@ describe('searchGrants', () => {
   });
 });
 
+describe('per-org grant-category defaulting', () => {
+  /** Fake fetch that records each search2 request body so we can assert the filter. */
+  function installRecordingFetch() {
+    const original = globalThis.fetch;
+    /** @type {any[]} */
+    const bodies = [];
+    globalThis.fetch = async (url, init) => {
+      if (!String(url).includes('fetchOpportunity')) bodies.push(JSON.parse(init.body));
+      return { ok: true, json: async () => (String(url).includes('fetchOpportunity') ? DETAIL : SEARCH) };
+    };
+    return { bodies, restore: () => (globalThis.fetch = original) };
+  }
+
+  it("applies the org's default category codes (pipe-joined) when the user names no category", async () => {
+    const { bodies, restore } = installRecordingFetch();
+    try {
+      await searchGrants({ query: 'food', defaultCategoryCodes: ['FN', 'ISS'] });
+      assert.strictEqual(bodies[0].fundingCategories, 'FN|ISS');
+    } finally {
+      restore();
+    }
+  });
+
+  it("lets the user's explicit category override the org defaults", async () => {
+    const { bodies, restore } = installRecordingFetch();
+    try {
+      await searchGrants({ query: 'schools', category: 'education', defaultCategoryCodes: ['FN', 'ISS'] });
+      assert.strictEqual(bodies[0].fundingCategories, 'ED');
+    } finally {
+      restore();
+    }
+  });
+
+  it('drops an unknown default code and searches unfiltered rather than sending a bad filter', async () => {
+    const { bodies, restore } = installRecordingFetch();
+    try {
+      await searchGrants({ query: 'food', defaultCategoryCodes: ['ZZ'] });
+      assert.strictEqual(bodies[0].fundingCategories, undefined);
+    } finally {
+      restore();
+    }
+  });
+
+  it('sends no category filter when neither a user category nor org defaults are given', async () => {
+    const { bodies, restore } = installRecordingFetch();
+    try {
+      await searchGrants({ query: 'anything' });
+      assert.strictEqual(bodies[0].fundingCategories, undefined);
+    } finally {
+      restore();
+    }
+  });
+});
+
 describe('createFindGrantsTool passthrough', () => {
   let restore;
   beforeEach(() => {

@@ -44,8 +44,18 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
 
     // Run the agent with deps for tool access
-    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
-    const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken, orgType };
+    const orgTypeId = sessionStore.getOrgType(userId);
+    const orgType = getOrgTypeById(orgTypeId)?.label;
+    const deps = {
+      client,
+      userId,
+      channelId,
+      threadTs,
+      messageTs: event.ts,
+      userToken: context.userToken,
+      orgType,
+      orgTypeId,
+    };
     const {
       responseText,
       sessionId: newSessionId,

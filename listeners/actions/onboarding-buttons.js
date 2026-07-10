@@ -175,7 +175,8 @@ export async function handlePromptButton({ ack, body, client, context, logger })
     // Show a native assistant-thread status while Benvu works.
     await setAssistantStatus(client, channelId, threadTs, statusForMessage(prompt));
 
-    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
+    const orgTypeId = sessionStore.getOrgType(userId);
+    const orgType = getOrgTypeById(orgTypeId)?.label;
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
     const deps = {
       client,
@@ -185,6 +186,7 @@ export async function handlePromptButton({ ack, body, client, context, logger })
       messageTs: threadTs,
       userToken: context.userToken,
       orgType,
+      orgTypeId,
     };
 
     const { responseText, sessionId, grants } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);

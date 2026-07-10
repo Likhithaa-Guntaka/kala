@@ -131,9 +131,40 @@ describe('buildAppHomeView', () => {
 
     it('groups cards with dividers between them, not after every element', () => {
       const view = buildAppHomeView(null, 'education', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
-      // 6 cards → 5 dividers between them, plus the header rule and the footer rule.
+      // 6 cards → 5 dividers between them, plus the header rule, the tailored-prompt
+      // section rule, and the footer rule.
       const dividers = blocksOfType(view, 'divider').length;
-      assert.ok(dividers >= 5 && dividers <= 7, `expected grouping dividers, got ${dividers}`);
+      assert.ok(dividers >= 5 && dividers <= 9, `expected grouping dividers, got ${dividers}`);
+    });
+
+    it('renders the org tailored and RTS prompt rows as prompt_run_ buttons (Food Bank)', () => {
+      const view = buildAppHomeView(null, 'food_bank', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+      const org = getOrgTypeById('food_bank');
+      const tailored = block(view, 'home_tailored_prompts');
+      const rts = block(view, 'home_rts_prompts');
+      assert.ok(tailored && rts, 'both prompt rows present');
+      assert.strictEqual(tailored.elements.length, org.tailoredPrompts.length);
+      assert.strictEqual(rts.elements.length, org.rtsPrompts.length);
+      // Every prompt button runs via the shared prompt_run_ handler, full prompt in value.
+      const all = [...tailored.elements, ...rts.elements];
+      for (const el of all) {
+        assert.ok(el.action_id.startsWith('prompt_run_'));
+        assert.ok(typeof el.value === 'string' && el.value.length > 0);
+      }
+      // Action_ids stay unique across the two rows (RTS offset past the tailored ones).
+      const ids = all.map((e) => e.action_id);
+      assert.strictEqual(new Set(ids).size, ids.length);
+    });
+
+    it('omits the RTS row for a type that defines none (Education)', () => {
+      const view = buildAppHomeView(null, 'education', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+      assert.ok(block(view, 'home_tailored_prompts'), 'tailored row present');
+      assert.strictEqual(block(view, 'home_rts_prompts'), undefined);
+    });
+
+    it('the reconfigured Food Bank home (with tailored + RTS rows) has no emoji', () => {
+      const view = buildAppHomeView(null, 'food_bank', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+      assertNoEmoji(view);
     });
 
     it('shows a transient notice banner near the top when one is passed', () => {

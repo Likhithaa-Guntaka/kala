@@ -28,7 +28,8 @@ export async function runCommandAgent({ respond, client, command, context, promp
 
   try {
     const userId = command.user_id;
-    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
+    const orgTypeId = sessionStore.getOrgType(userId);
+    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -37,6 +38,7 @@ export async function runCommandAgent({ respond, client, command, context, promp
       messageTs: '',
       userToken: context.userToken,
       orgType,
+      orgTypeId,
     };
 
     const { responseText, grants } = await runBenvuAgent(prompt, undefined, deps);

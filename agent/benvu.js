@@ -2,6 +2,7 @@ import { createSdkMcpServer, query, tool } from '@anthropic-ai/claude-agent-sdk'
 import { z } from 'zod';
 
 import { recordTiming } from '../listeners/feedback-store.js';
+import { getOrgTypeById } from '../listeners/org-types.js';
 import { sessionStore } from '../thread-context/index.js';
 import { addDeadline, daysUntil } from './tools/deadline-store.js';
 import {
@@ -205,6 +206,55 @@ function orgContext(orgType) {
 }
 
 /**
+ * One line describing when/how to offer a seeded deadline. The date rule stays
+ * fact-based: for anything that depends on the fiscal year or the state, the
+ * agent must state its assumption and ask rather than invent a specific date.
+ * @param {import('../listeners/org-types.js').SeededDeadline} d
+ * @returns {string}
+ */
+function seededDeadlineLine(d) {
+  switch (d.rule) {
+    case 'irs990':
+      return (
+        `${d.title} — ${d.framing}. It is due the 15th day of the 5th month after the fiscal-year end. ` +
+        'Assuming a December 31 fiscal year end that is May 15, so say "assuming a December fiscal year end, ' +
+        'Form 990 is due May 15 — is that right?" and adjust if theirs differs. Never assume the fiscal year silently.'
+      );
+    case 'annual':
+      return `${d.title} — ${d.framing}${d.month ? ` (recurs around ${d.month} each year)` : ''}.`;
+    default:
+      return (
+        `${d.title} — ${d.framing}. The schedule varies by state, so offer to set a recurring reminder and ` +
+        'ask their reporting cadence rather than assuming a date.'
+      );
+  }
+}
+
+/**
+ * Extra system-prompt context for an org type's flagship behavior. Scoped to the
+ * active org type only; it never changes core reasoning or the plain-language
+ * rules. Returns '' for org types with no flagship.
+ * @param {import('../listeners/org-types.js').OrgType | undefined} org
+ * @returns {string}
+ */
+function flagshipContext(org) {
+  const flagship = org?.flagship;
+  if (!flagship || flagship.kind === 'none') return '';
+
+  if (flagship.kind === 'seed_deadlines') {
+    const lines = flagship.deadlines.map((d) => `- ${seededDeadlineLine(d)}`).join('\n');
+    return (
+      '\n\n## RECURRING DEADLINES YOU CAN OFFER TO TRACK\n' +
+      'This organization has recurring compliance deadlines. When it is relevant, you may proactively OFFER ' +
+      'to track these — but never create a reminder until the user confirms, and always use track_deadline to ' +
+      `set one (it is the only way a reminder is saved). Do not silently assume any date.\n${lines}`
+    );
+  }
+
+  return '';
+}
+
+/**
  * Extra system-prompt context naming the most recent draft in this conversation,
  * so an edit request ("make it shorter") reliably targets it. The draft itself is
  * already in the conversation history; this just flags that one is pending.
@@ -289,7 +339,8 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * @property {string} threadTs
  * @property {string} messageTs
  * @property {string} [userToken]
- * @property {string} [orgType] - The user's org type label, for tailoring responses.
+ * @property {string} [orgType] - The user's org type label, for tailoring prose in the system prompt.
+ * @property {string | null} [orgTypeId] - The user's org type id, which drives data-level tailoring (grant defaults, flagship behavior).
  */
 
 /**
@@ -496,12 +547,16 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
   // Capture structured grant results out-of-band so the caller can render native
   // cards. The text the tool returns to the model is unchanged, so reasoning and
   // prose are unaffected.
+  // Resolve the active org type once, from its id — this drives data-level
+  // tailoring (grant-category defaults, flagship behavior) beyond the prose hint.
+  const org = getOrgTypeById(deps?.orgTypeId);
+
   /** @type {import('./tools/grant-finder.js').GrantResult[]} */
   const collectedGrants = [];
   const findGrantsTool = createFindGrantsTool((grants) => {
     collectedGrants.length = 0;
     collectedGrants.push(...grants);
-  });
+  }, org?.defaultGrantCategories);
 
   // Capture the most recent draft (thank-you, report, announcement) so a follow-up
   // edit can target it. The tool text returned to the model is unchanged.
@@ -549,7 +604,7 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
 
   /** @type {import('@anthropic-ai/claude-agent-sdk').Options} */
   const options = {
-    systemPrompt: BENVU_SYSTEM_PROMPT + orgContext(deps?.orgType) + draftContext(pendingDraft),
+    systemPrompt: BENVU_SYSTEM_PROMPT + orgContext(deps?.orgType) + flagshipContext(org) + draftContext(pendingDraft),
     mcpServers,
     allowedTools,
     permissionMode: 'bypassPermissions',

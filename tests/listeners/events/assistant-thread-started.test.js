@@ -47,7 +47,7 @@ describe('handleAssistantThreadStarted', () => {
       const org = getOrgTypeById('education');
       assert.deepStrictEqual(
         prompts,
-        org.prompts.slice(0, 4).map((message) => ({ title: message, message })),
+        org.tailoredPrompts.slice(0, 4).map((message) => ({ title: message, message })),
       );
     } finally {
       sessionStore.clearOrgType('U123');

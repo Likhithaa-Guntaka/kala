@@ -1,5 +1,6 @@
 import { getOrgTypeById, ORG_TYPES } from '../org-types.js';
 import { actions, button, context, divider, header, section } from './kit.js';
+import { buildPromptButtons } from './onboarding-builder.js';
 
 /**
  * @typedef {Object} Category
@@ -96,6 +97,28 @@ function orderedActions(org) {
 }
 
 /**
+ * This org type's operational-language prompt rows: the tailored prompts, plus a
+ * separate row of RTS-grounded prompts (framed to search the team's own channels)
+ * when the type defines them. Clicking a prompt runs it via the shared
+ * prompt_run_ handler, which opens a DM from the Home tab. Emoji-free by design.
+ * @param {import('../org-types.js').OrgType} org
+ * @returns {import('@slack/types').KnownBlock[]}
+ */
+function tailoredPromptBlocks(org) {
+  /** @type {import('@slack/types').KnownBlock[]} */
+  const blocks = [section('*A few things I can do for you*')];
+  blocks.push(buildPromptButtons(org.tailoredPrompts, 'home_tailored_prompts'));
+
+  if (org.rtsPrompts?.length) {
+    // Offset the action_ids past the tailored ones so both rows coexist in the view.
+    blocks.push(buildPromptButtons(org.rtsPrompts, 'home_rts_prompts', org.tailoredPrompts.length));
+    blocks.push(context("These search your team's own channels, so answers reflect what people actually said."));
+  }
+  blocks.push(divider());
+  return blocks;
+}
+
+/**
  * The six actions as "card" section blocks: each a bold title with a one-line
  * description and a button accessory. The org's #1 action leads and is the only
  * card with a primary button; dividers sit between cards to group them.
@@ -185,6 +208,7 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   }
   blocks.push(section(TAGLINE), divider());
 
+  blocks.push(...tailoredPromptBlocks(org));
   blocks.push(...actionCards(org));
 
   // Footer: the change-org control (a button can't live in a context block, so it

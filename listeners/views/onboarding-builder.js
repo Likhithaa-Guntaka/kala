@@ -17,18 +17,31 @@ export function buildOrgTypeActionsBlock() {
 }
 
 /**
- * An actions block with the three tailored example prompts as buttons. The full
- * prompt rides in the value; the label is truncated to Slack's button limit.
+ * An actions block of prompt buttons. The full prompt rides in the value (so the
+ * agent runs the exact prompt); the label is truncated to Slack's button limit.
+ * `startIndex` offsets the action_ids so multiple prompt rows can coexist in one
+ * view without colliding.
+ * @param {string[]} prompts
+ * @param {string} blockId
+ * @param {number} [startIndex]
+ * @returns {import('@slack/types').ActionsBlock}
+ */
+export function buildPromptButtons(prompts, blockId, startIndex = 0) {
+  return actions(
+    blockId,
+    prompts.map((prompt, i) =>
+      button({ text: prompt, actionId: `${PROMPT_ACTION_PREFIX}${startIndex + i}`, value: prompt }),
+    ),
+  );
+}
+
+/**
+ * An actions block with this org type's tailored example prompts as buttons.
  * @param {import('../org-types.js').OrgType} orgType
  * @returns {import('@slack/types').ActionsBlock}
  */
 export function buildPromptActionsBlock(orgType) {
-  return actions(
-    'tailored_prompts',
-    orgType.prompts.map((prompt, i) =>
-      button({ text: prompt, actionId: `${PROMPT_ACTION_PREFIX}${i}`, value: prompt }),
-    ),
-  );
+  return buildPromptButtons(orgType.tailoredPrompts, 'tailored_prompts');
 }
 
 /**

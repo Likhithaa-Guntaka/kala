@@ -39,6 +39,15 @@ const CATEGORY_CODES = {
   transportation: 'T',
 };
 
+/**
+ * The set of funding-category codes we know Grants.gov accepts (every code this
+ * app can produce). Used to drop a bad or stale org-default code before it
+ * reaches the API, so a typo falls back to an unfiltered search instead of a
+ * wrong filter.
+ * @type {Set<string>}
+ */
+const KNOWN_CATEGORY_CODES = new Set(Object.values(CATEGORY_CODES));
+
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** Description and schema, shared so the tool behaves identically wherever it's built. */
@@ -150,16 +159,29 @@ function isoDeadline(date) {
  * Search Grants.gov and return BOTH the structured results (for native cards)
  * and the formatted text (unchanged — this is exactly what the model sees, so
  * the agent's prose is unaffected).
- * @param {{ query: string, category?: string, location?: string, maxAmount?: number }} args
+ * @param {{ query: string, category?: string, location?: string, maxAmount?: number, defaultCategoryCodes?: string[] }} args
+ *   `category` is the user's plain-language category (mapped to one code and it
+ *   wins when present). `defaultCategoryCodes` are the active org type's default
+ *   Grants.gov codes (primary first), used only when the user named no category.
  * @returns {Promise<{ grants: GrantResult[], text: string }>}
  */
-export async function searchGrants({ query, category, location, maxAmount }) {
+export async function searchGrants({ query, category, location, maxAmount, defaultCategoryCodes }) {
   try {
-    // 1. Server-side search. Apply the category code when we can map it.
-    const code = category ? CATEGORY_CODES[category.trim().toLowerCase()] : undefined;
+    // 1. Resolve the funding-category filter. An explicit user category wins;
+    // otherwise fall back to the org type's defaults. Drop unknown codes (logged)
+    // so a bad code becomes an unfiltered search, never a wrong filter.
+    const userCode = category ? CATEGORY_CODES[category.trim().toLowerCase()] : undefined;
+    const requested = userCode ? [userCode] : (defaultCategoryCodes ?? []);
+    const codes = requested.filter((c) => {
+      if (KNOWN_CATEGORY_CODES.has(c)) return true;
+      console.warn(`[find_grants] dropping unknown funding-category code: ${c}`);
+      return false;
+    });
+
     /** @type {Record<string, unknown>} */
     const body = { keyword: query, oppStatuses: 'posted', rows: 25 };
-    if (code) body.fundingCategories = code;
+    // Grants.gov Search2 accepts a pipe-delimited list (OR across categories).
+    if (codes.length) body.fundingCategories = codes.join('|');
 
     let search = await postJson(SEARCH_URL, body, 12000);
     if (search?.errorcode !== 0) throw new Error(search?.msg || 'search failed');
@@ -167,7 +189,7 @@ export async function searchGrants({ query, category, location, maxAmount }) {
     /** @type {any[]} */
     let hits = search?.data?.oppHits ?? [];
     // If the category filter zeroed out the results, retry without it.
-    if (hits.length === 0 && code) {
+    if (hits.length === 0 && codes.length) {
       delete body.fundingCategories;
       search = await postJson(SEARCH_URL, body, 12000);
       hits = search?.data?.oppHits ?? [];
@@ -245,11 +267,14 @@ export async function searchGrants({ query, category, location, maxAmount }) {
  * Build the find_grants tool. `onResults` receives the structured grants each
  * time the tool runs, so the caller can render native cards. The text returned
  * to the model is unchanged, so the agent's reasoning and prose are unaffected.
+ * `defaultCategoryCodes` are the active org type's Grants.gov defaults, applied
+ * only when the user's query names no category of its own.
  * @param {(grants: GrantResult[]) => void} [onResults]
+ * @param {string[]} [defaultCategoryCodes]
  */
-export function createFindGrantsTool(onResults) {
+export function createFindGrantsTool(onResults, defaultCategoryCodes) {
   return tool('find_grants', FIND_GRANTS_DESCRIPTION, FIND_GRANTS_SCHEMA, async (args) => {
-    const { grants, text } = await searchGrants(args);
+    const { grants, text } = await searchGrants({ ...args, defaultCategoryCodes });
     if (onResults) onResults(grants);
     return { content: [{ type: 'text', text }] };
   });

@@ -71,7 +71,8 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       return;
     }
 
-    const orgType = getOrgTypeById(sessionStore.getOrgType(reactor))?.label;
+    const orgTypeId = sessionStore.getOrgType(reactor);
+    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId: reactor,
@@ -80,6 +81,7 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       messageTs,
       userToken: context.userToken,
       orgType,
+      orgTypeId,
     };
     const { responseText, grants } = await runBenvuAgent(action.prompt(messageContent), undefined, deps);
 

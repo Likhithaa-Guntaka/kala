@@ -66,7 +66,8 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
     const thinkingTs = /** @type {string} */ (thinking.ts);
 
     const prompt = (PROMPTS[choice] || PROMPTS.summarize)(text);
-    const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
+    const orgTypeId = sessionStore.getOrgType(userId);
+    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -75,6 +76,7 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
       messageTs: thinkingTs,
       userToken: context.userToken,
       orgType,
+      orgTypeId,
     };
 
     const { responseText, grants } = await runBenvuAgent(prompt, undefined, deps);
