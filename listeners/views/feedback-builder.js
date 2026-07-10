@@ -48,11 +48,12 @@ export function buildFeedbackCommentModal(privateMetadata) {
 
 /**
  * Wrap a full agent response for a single posted message: the response text as
- * one or more section blocks (Slack caps section text at 3000 chars), followed by
- * the bottom feedback actions block.
+ * one or more section blocks (Slack caps section text at 3000 chars), then any
+ * extra blocks (e.g. grant cards), then the bottom feedback actions block.
  * @param {string} text
+ * @param {import('@slack/types').KnownBlock[]} [middleBlocks]
  * @returns {import('@slack/types').KnownBlock[]}
  */
-export function buildAgentReply(text) {
-  return [...splitSections(text), ...buildFeedbackBlocks()];
+export function buildAgentReply(text, middleBlocks = []) {
+  return [...splitSections(text), ...middleBlocks, ...buildFeedbackBlocks()];
 }

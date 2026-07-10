@@ -4,6 +4,7 @@ import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAppHomeView, CHANGE_ORG_VALUE } from '../views/app-home-builder.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
+import { grantCardsFor } from '../views/grant-results-builder.js';
 import { buildIssueModal } from '../views/issue-modal-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
 
@@ -157,15 +158,15 @@ export async function handlePromptButton({ ack, body, client, context, logger })
       orgType,
     };
 
-    const { responseText, sessionId } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
+    const { responseText, sessionId, grants } = await runBenvuAgent(prompt, existingSessionId ?? undefined, deps);
 
-    // Clear the status, then post the answer with feedback buttons.
+    // Clear the status, then post the answer with grant cards + feedback buttons.
     await setAssistantStatus(client, channelId, threadTs, '');
     await client.chat.postMessage({
       channel: channelId,
       thread_ts: threadTs,
       text: responseText,
-      blocks: buildAgentReply(responseText),
+      blocks: buildAgentReply(responseText, grantCardsFor(grants, prompt)),
     });
 
     if (sessionId) sessionStore.setSession(channelId, threadTs, sessionId);

@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { recordTiming } from '../listeners/feedback-store.js';
 import { addDeadline, daysUntil } from './tools/deadline-store.js';
 import {
+  createFindGrantsTool,
   createVolunteerAnnouncementTool,
   draftDonorThankYouTool,
   draftImpactReportTool,
-  findGrantsTool,
   summarizeMeetingTool,
 } from './tools/index.js';
 import { formatWorkspaceResults, searchWorkspaceContext } from './tools/rts.js';
@@ -223,7 +223,7 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * @param {string} text - The user's message text.
  * @param {string} [sessionId] - An existing session ID to resume conversation.
  * @param {BenvuDeps} [deps] - Dependencies for tools that need Slack API access.
- * @returns {Promise<{responseText: string, sessionId: string | null}>}
+ * @returns {Promise<{responseText: string, sessionId: string | null, toolsUsed: string[], grants: import('./tools/grant-finder.js').GrantResult[]}>}
  */
 export async function runBenvuAgent(text, sessionId = undefined, deps = undefined) {
   // Closure-based tools that need deps for Slack API access
@@ -407,6 +407,16 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
     },
   );
 
+  // Capture structured grant results out-of-band so the caller can render native
+  // cards. The text the tool returns to the model is unchanged, so reasoning and
+  // prose are unaffected.
+  /** @type {import('./tools/grant-finder.js').GrantResult[]} */
+  const collectedGrants = [];
+  const findGrantsTool = createFindGrantsTool((grants) => {
+    collectedGrants.length = 0;
+    collectedGrants.push(...grants);
+  });
+
   const benvuToolsServer = createSdkMcpServer({
     name: 'benvu-tools',
     version: '1.0.0',
@@ -469,5 +479,5 @@ export async function runBenvuAgent(text, sessionId = undefined, deps = undefine
 
   let responseText = responseParts.join('\n');
   responseText += outcomeMetricLine(toolsUsed, Date.now() - startTime);
-  return { responseText, sessionId: newSessionId };
+  return { responseText, sessionId: newSessionId, toolsUsed: [...toolsUsed], grants: collectedGrants };
 }

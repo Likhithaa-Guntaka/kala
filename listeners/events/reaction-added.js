@@ -2,6 +2,7 @@ import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
+import { grantCardsFor } from '../views/grant-results-builder.js';
 
 /**
  * Reactions Benvu acts on. Each maps an emoji name to either an agent prompt
@@ -80,13 +81,13 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       userToken: context.userToken,
       orgType,
     };
-    const { responseText } = await runBenvuAgent(action.prompt(messageContent), undefined, deps);
+    const { responseText, grants } = await runBenvuAgent(action.prompt(messageContent), undefined, deps);
 
     await client.chat.postMessage({
       channel: channelId,
       thread_ts: messageTs,
       text: responseText,
-      blocks: buildAgentReply(responseText),
+      blocks: buildAgentReply(responseText, grantCardsFor(grants, messageContent)),
     });
   } catch (e) {
     handled.delete(dedupeKey);

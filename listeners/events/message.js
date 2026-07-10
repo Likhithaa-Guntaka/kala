@@ -3,6 +3,7 @@ import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
+import { grantCardsFor } from '../views/grant-results-builder.js';
 
 /**
  * @param {import('@slack/types').MessageEvent} event
@@ -82,14 +83,18 @@ export async function handleMessage({ client, context, event, logger, say, saySt
     // Run the agent with deps for tool access
     const orgType = getOrgTypeById(sessionStore.getOrgType(userId))?.label;
     const deps = { client, userId, channelId, threadTs, messageTs: event.ts, userToken: context.userToken, orgType };
-    const { responseText, sessionId: newSessionId } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
+    const {
+      responseText,
+      sessionId: newSessionId,
+      grants,
+    } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
 
-    // Clear the status, then stream the response in thread with feedback buttons.
+    // Clear the status, then stream the response in thread with grant cards
+    // (when the search ran) and the feedback buttons.
     await setAssistantStatus(client, channelId, threadTs, '');
     const streamer = sayStream();
     await streamer.append({ markdown_text: responseText });
-    const feedbackBlocks = buildFeedbackBlocks();
-    await streamer.stop({ blocks: feedbackBlocks });
+    await streamer.stop({ blocks: [...grantCardsFor(grants, text), ...buildFeedbackBlocks()] });
 
     // Store conversation session
     if (newSessionId) {

@@ -2,6 +2,7 @@ import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { getOrgTypeById } from '../org-types.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
+import { grantCardsFor } from '../views/grant-results-builder.js';
 
 /**
  * Shared runner for slash commands: shows a "thinking" indicator, runs the
@@ -38,12 +39,12 @@ export async function runCommandAgent({ respond, client, command, context, promp
       orgType,
     };
 
-    const { responseText } = await runBenvuAgent(prompt, undefined, deps);
+    const { responseText, grants } = await runBenvuAgent(prompt, undefined, deps);
     await respond({
       replace_original: true,
       response_type: 'in_channel',
       text: responseText,
-      blocks: buildAgentReply(responseText),
+      blocks: buildAgentReply(responseText, grantCardsFor(grants, prompt)),
     });
   } catch (e) {
     logger.error(`Slash command agent failed: ${e}`);
