@@ -56,10 +56,19 @@ describe('buildAppHomeView', () => {
         assert.ok(el.action_id.startsWith('orgtype_'));
         assert.strictEqual(el.style, undefined);
       }
-      // Labels are the plain org label, without the data-model emoji.
-      const org = ORG_TYPES[0];
-      const btn = els.find((e) => e.action_id === `orgtype_${org.id}`);
-      assert.strictEqual(btn.text.text, org.label);
+      // Every picker button must render the plain org label — never the
+      // data-model emoji, and never an emoji-prefixed label. Check all six,
+      // not just the first, so a partial regression can't slip through.
+      for (const org of ORG_TYPES) {
+        const btn = els.find((e) => e.action_id === `orgtype_${org.id}`);
+        assert.strictEqual(btn.text.text, org.label, `${org.id} button must be the plain label`);
+      }
+    });
+
+    it('the org-type picker blocks contain no emoji', () => {
+      const view = buildAppHomeView();
+      const picker = [block(view, 'org_type_select_1'), block(view, 'org_type_select_2')];
+      assertNoEmoji(picker);
     });
   });
 
