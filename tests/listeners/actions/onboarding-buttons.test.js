@@ -2,7 +2,19 @@ import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleChangeOrgType, handleOrgTypeSelected } from '../../../listeners/actions/onboarding-buttons.js';
+import { _resetPublishGen } from '../../../listeners/views/publish-home.js';
 import { sessionStore } from '../../../thread-context/index.js';
+
+/** @param {number} ms */
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Read the org label out of a published Home view (or 'PICKER'/'?'). @param {any} view */
+function orgLabelOf(view) {
+  const ctx = (view.blocks || []).filter((b) => b.type === 'context').flatMap((b) => b.elements.map((e) => e.text));
+  const line = ctx.find((t) => /Tailored for/.test(t));
+  if (line) return line;
+  return (view.blocks || []).some((b) => String(b.block_id || '').startsWith('org_type_select')) ? 'PICKER' : '?';
+}
 
 describe('onboarding action handlers', () => {
   let fakeAck;
@@ -87,6 +99,66 @@ describe('onboarding action handlers', () => {
         fakeClient.chat.postMessage.mock.calls[0].arguments[0].text,
         'Set up for Food Bank / Basic Needs.',
       );
+    });
+
+    it('Home shows the NEW org after a switch even if the first refresh is slow (race regression)', async () => {
+      // Reproduces the display bug: the food_bank onboarding refresh awaits a slow
+      // name fetch and, unfixed, publishes its stale snapshot last — clobbering the
+      // Education view. The guarded publisher must make Education win.
+      _resetPublishGen();
+      const U = 'URACEINT';
+      sessionStore.clearOrgType(U);
+
+      const publishes = [];
+      let infoCall = 0;
+      const client = {
+        conversations: { open: async () => ({ channel: { id: 'D1' } }) },
+        chat: { postMessage: async () => ({ ok: true, ts: '1' }) },
+        views: {
+          publish: async (a) => {
+            publishes.push(a.view);
+            return { ok: true };
+          },
+        },
+        users: {
+          info: async () => {
+            const n = infoCall++;
+            await delay(n === 0 ? 60 : 2); // the first refresh (food_bank) is the slow one
+            return { user: { profile: { first_name: 'Dee' } } };
+          },
+          profile: {
+            set: async () => {
+              throw new Error('not_allowed');
+            },
+          },
+        },
+      };
+      const ctx = { botUserId: 'U0BOT' };
+      const logger = { error: () => {}, info: () => {} };
+      const sel = (v) =>
+        handleOrgTypeSelected({
+          ack: async () => {},
+          body: { user: { id: U }, actions: [{ value: v }] },
+          client,
+          context: ctx,
+          logger,
+        });
+      const chg = () =>
+        handleChangeOrgType({ ack: async () => {}, body: { user: { id: U } }, client, context: ctx, logger });
+
+      const p1 = sel('food_bank'); // first onboarding -> slow refresh
+      await delay(10);
+      const p2 = chg(); // clear -> picker
+      await delay(10);
+      const p3 = sel('education'); // switch
+      await Promise.all([p1, p2, p3]);
+
+      // The store was always correct; the bug was purely the last published view.
+      assert.strictEqual(sessionStore.getOrgType(U), 'education');
+      const last = publishes[publishes.length - 1];
+      assert.match(orgLabelOf(last), /Education/, 'the last published Home view shows Education');
+      assert.ok(!/Food Bank/.test(orgLabelOf(last)), 'the stale Food Bank view never lands last');
+      sessionStore.clearOrgType(U);
     });
   });
 

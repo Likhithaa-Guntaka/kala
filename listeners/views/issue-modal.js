@@ -1,6 +1,4 @@
-import { sessionStore } from '../../thread-context/index.js';
-import { buildAppHomeView } from './app-home-builder.js';
-import { fetchFirstName } from './user-name.js';
+import { publishHome } from './publish-home.js';
 
 /**
  * Handle issue submission from the modal.
@@ -45,16 +43,14 @@ export async function handleIssueSubmission({ ack, body, client, context, logger
     });
 
     // In-place confirmation on the Home tab (the only feasible signal there):
-    // republish it with a transient banner. Best-effort — a failure here must not
-    // fail the submission, since the DM has already been sent.
+    // republish it with a transient banner via the guarded publisher. Best-effort —
+    // a failure here must not fail the submission, since the DM has already been sent.
     try {
-      const orgTypeId = sessionStore.getOrgType(userId);
-      const firstName = await fetchFirstName(client, userId);
-      const view = buildAppHomeView(context.botUserId, orgTypeId, {
-        firstName,
+      await publishHome(client, {
+        userId,
+        botUserId: context.botUserId,
         notice: `Sent to your messages — open the Messages tab to see what I found for *${category}*.`,
       });
-      await client.views.publish({ user_id: userId, view });
     } catch (bannerErr) {
       logger.error(`Failed to show Home confirmation banner: ${bannerErr}`);
     }

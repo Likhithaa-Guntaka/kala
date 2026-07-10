@@ -2,23 +2,20 @@ import { runBenvuAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
 import { getOrgTypeById } from '../org-types.js';
-import { buildAppHomeView } from '../views/app-home-builder.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
 import { buildTailoredPromptsDmBlocks } from '../views/onboarding-builder.js';
-import { fetchFirstName } from '../views/user-name.js';
+import { publishHome } from '../views/publish-home.js';
 
 /**
- * Re-publish the App Home view for a user (reflects their current org type).
+ * Re-publish the App Home view for a user (reflects their current org type),
+ * guarded against stale overwrites by publishHome.
  * @param {import('@slack/web-api').WebClient} client
  * @param {any} context
  * @param {string} userId
  */
 async function refreshAppHome(client, context, userId) {
-  const orgType = sessionStore.getOrgType(userId);
-  const firstName = await fetchFirstName(client, userId);
-  const view = buildAppHomeView(context.botUserId, orgType, { firstName });
-  await client.views.publish({ user_id: userId, view });
+  await publishHome(client, { userId, botUserId: context.botUserId });
 }
 
 /**
