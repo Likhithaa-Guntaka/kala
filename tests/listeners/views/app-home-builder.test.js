@@ -61,16 +61,20 @@ describe('buildAppHomeView', () => {
       assert.ok(sections.includes(PICKER_PROMPT));
     });
 
-    it('has the exact block order: Benvu, tagline, value, divider, prompt, then picker rows', () => {
+    it('has the exact block order: wordmark image, Benvu, tagline, value, divider, prompt, then picker rows', () => {
       const blocks = buildAppHomeView().blocks;
-      assert.strictEqual(blocks[0].type, 'header');
-      assert.strictEqual(blocks[0].text.text, 'Benvu');
-      assert.strictEqual(blocks[1].text.text, PICKER_TAGLINE);
-      assert.strictEqual(blocks[2].text.text, PICKER_VALUE);
-      assert.strictEqual(blocks[3].type, 'divider');
-      assert.strictEqual(blocks[4].text.text, PICKER_PROMPT);
+      // The wordmark image leads the pre-selection screen, above the Benvu header.
+      assert.strictEqual(blocks[0].type, 'image');
+      assert.ok(blocks[0].image_url.startsWith('https://'));
+      assert.strictEqual(blocks[0].alt_text, 'Benvu — your AI teammate for nonprofits');
+      assert.strictEqual(blocks[1].type, 'header');
+      assert.strictEqual(blocks[1].text.text, 'Benvu');
+      assert.strictEqual(blocks[2].text.text, PICKER_TAGLINE);
+      assert.strictEqual(blocks[3].text.text, PICKER_VALUE);
+      assert.strictEqual(blocks[4].type, 'divider');
+      assert.strictEqual(blocks[5].text.text, PICKER_PROMPT);
       // Everything after the prompt is a picker actions row — nothing trails the buttons.
-      const tail = blocks.slice(5);
+      const tail = blocks.slice(6);
       assert.ok(tail.length > 0);
       assert.ok(
         tail.every((b) => b.type === 'actions' && String(b.block_id).startsWith('org_type_select_')),
