@@ -72,10 +72,16 @@ describe('handleAppHomeOpened', () => {
 
       assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
       assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
-      // Greeting fell back to the neutral form (no ", Name!").
+      // The header stays the stable "Benvu" brand; the greeting is a bold section
+      // beneath it (matching the branded-header redesign and its sibling tests).
+      // With the name lookup timed out, that greeting falls back to the neutral
+      // form (no ", Name!").
       const view = fakeClient.views.publish.mock.calls[0].arguments[0].view;
-      const header = view.blocks.find((b) => b.type === 'header');
-      assert.match(header.text.text, /^Good (morning|afternoon|evening)!$/);
+      const greeting = view.blocks.find(
+        (b) => b.type === 'section' && /^\*Good (morning|afternoon|evening)/.test(b.text?.text || ''),
+      );
+      assert.ok(greeting, 'renders a neutral greeting section');
+      assert.match(greeting.text.text, /^\*Good (morning|afternoon|evening)!\*$/);
     } finally {
       mock.timers.reset();
       sessionStore.clearOrgType('U123');
