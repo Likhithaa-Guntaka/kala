@@ -40,3 +40,14 @@ export async function handleGrantTrackDeadline({ ack, body, respond, logger }) {
     logger.error(`Failed to track grant deadline: ${e}`);
   }
 }
+
+/**
+ * "View opportunity" button on a grant card. It's a URL button, so Slack opens
+ * the link client-side; this handler just acknowledges the interaction Slack
+ * still sends, so Bolt doesn't log it as unhandled.
+ * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackActionMiddlewareArgs<import('@slack/bolt').BlockButtonAction>} args
+ * @returns {Promise<void>}
+ */
+export async function handleGrantViewOpportunity({ ack }) {
+  await ack();
+}

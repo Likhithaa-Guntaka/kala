@@ -4,6 +4,9 @@ import { button, context, divider, section, sectionFields, truncate } from './ki
 /** Action ID for the per-grant "Track deadline" button. */
 export const GRANT_TRACK_ACTION = 'grant_track_deadline';
 
+/** Action ID for the per-grant "View opportunity" fallback (URL) button. */
+export const GRANT_VIEW_ACTION = 'grant_view_opportunity';
+
 /** How many cards to show before collapsing the rest into a "+N more" line. */
 const DEFAULT_LIMIT = 5;
 
@@ -23,10 +26,29 @@ export function trackValue(g) {
 }
 
 /**
+ * Choose a grant card's title accessory: the Track-deadline button when we have
+ * a real due date, else a plain "View opportunity" link when we have a url, else
+ * none.
+ * @param {import('../../agent/tools/grant-finder.js').GrantResult} g
+ * @param {import('../i18n.js').GrantLabels} L
+ * @returns {import('@slack/types').Button | undefined}
+ */
+function cardAccessory(g, L) {
+  if (g.deadlineIso) {
+    return button({ text: L.trackDeadline, actionId: GRANT_TRACK_ACTION, value: trackValue(g) });
+  }
+  if (g.url) {
+    return button({ text: L.viewOpportunity, actionId: GRANT_VIEW_ACTION, url: g.url });
+  }
+  return undefined;
+}
+
+/**
  * Render structured grant results as native cards: one section per grant with a
- * bold linked title and a Track-deadline accessory, a fields row for amount and
- * deadline, and an agency/category context line. Dividers between grants, a
- * source line at the end, and a "+N more" note when truncated.
+ * bold linked title and an accessory button, then a 2x2 fields grid
+ * (Amount | Deadline / Agency | Category). Category is omitted gracefully when
+ * absent, so Agency renders alone rather than as a blank cell. Dividers between
+ * grants, a source line at the end, and a "+N more" note when truncated.
  *
  * All static labels follow `language` so the cards match the agent's localized
  * prose. Grant titles, agency names, and amounts come from the API as-is.
@@ -45,23 +67,18 @@ export function buildGrantResults(grants, { language, limit = DEFAULT_LIMIT } = 
   shown.forEach((g, i) => {
     if (i > 0) blocks.push(divider());
 
-    // Title line, with a Track-deadline button when we have a real due date.
-    const titleText = `*<${g.url}|${g.title}>*`;
-    const accessory = g.deadlineIso
-      ? button({ text: L.trackDeadline, actionId: GRANT_TRACK_ACTION, value: trackValue(g) })
-      : undefined;
-    blocks.push(section(titleText, accessory));
+    blocks.push(section(`*<${g.url}|${g.title}>*`, cardAccessory(g, L)));
 
-    blocks.push(
-      sectionFields([
-        [L.amount, amountText(g.amount, L)],
-        [L.deadline, g.deadline || L.notListed],
-      ]),
-    );
-
-    const meta = [`${L.agency}: ${g.agency}`];
-    if (g.category) meta.push(`${L.category}: ${g.category}`);
-    blocks.push(context(meta.join(' · ')));
+    // 2x2 grid: Amount | Deadline / Agency | Category. Category is only added
+    // when present, so a card without one shows Agency alone (no blank cell).
+    /** @type {Array<[string, string]>} */
+    const fields = [
+      [L.amount, amountText(g.amount, L)],
+      [L.deadline, g.deadline || L.notListed],
+      [L.agency, g.agency],
+    ];
+    if (g.category) fields.push([L.category, g.category]);
+    blocks.push(sectionFields(fields));
   });
 
   const remaining = grants.length - shown.length;

@@ -15,6 +15,7 @@
  * @property {string} agency
  * @property {string} category
  * @property {string} trackDeadline
+ * @property {string} viewOpportunity
  * @property {string} notListed
  * @property {string} via
  * @property {(n: number) => string} more  Localized "+N more" line.
@@ -28,6 +29,7 @@ const LABELS = {
     agency: 'Agency',
     category: 'Category',
     trackDeadline: 'Track deadline',
+    viewOpportunity: 'View opportunity',
     notListed: 'Not listed',
     via: 'Live results from Grants.gov',
     more: (n) => `+${n} more — ask me to show the rest.`,
@@ -38,6 +40,7 @@ const LABELS = {
     agency: 'Agencia',
     category: 'Categoría',
     trackDeadline: 'Seguir plazo',
+    viewOpportunity: 'Ver oportunidad',
     notListed: 'No indicado',
     via: 'Resultados en vivo de Grants.gov',
     more: (n) => `+${n} más — pídeme que muestre el resto.`,
@@ -48,6 +51,7 @@ const LABELS = {
     agency: 'Agence',
     category: 'Catégorie',
     trackDeadline: 'Suivre l’échéance',
+    viewOpportunity: 'Voir l’offre',
     notListed: 'Non indiqué',
     via: 'Résultats en direct de Grants.gov',
     more: (n) => `+${n} de plus — demandez-moi d’afficher le reste.`,
@@ -58,6 +62,7 @@ const LABELS = {
     agency: 'Behörde',
     category: 'Kategorie',
     trackDeadline: 'Frist verfolgen',
+    viewOpportunity: 'Ausschreibung ansehen',
     notListed: 'Nicht angegeben',
     via: 'Live-Ergebnisse von Grants.gov',
     more: (n) => `+${n} weitere — bitte mich, den Rest zu zeigen.`,
@@ -68,6 +73,7 @@ const LABELS = {
     agency: 'Agência',
     category: 'Categoria',
     trackDeadline: 'Acompanhar prazo',
+    viewOpportunity: 'Ver oportunidade',
     notListed: 'Não informado',
     via: 'Resultados ao vivo do Grants.gov',
     more: (n) => `+${n} mais — peça para eu mostrar o restante.`,
@@ -78,6 +84,7 @@ const LABELS = {
     agency: 'Agenzia',
     category: 'Categoria',
     trackDeadline: 'Segui scadenza',
+    viewOpportunity: 'Vedi opportunità',
     notListed: 'Non indicato',
     via: 'Risultati dal vivo da Grants.gov',
     more: (n) => `+${n} altri — chiedimi di mostrare il resto.`,
