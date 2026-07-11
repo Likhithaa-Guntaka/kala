@@ -25,6 +25,7 @@
  * @property {string[]} primaryActions - Action IDs of the 2-3 quick actions this org type uses most.
  * @property {string[]} tailoredPrompts - Operational-language example prompts (App Home rows, onboarding, suggested prompts).
  * @property {string[]} [defaultGrantCategories] - Grants.gov funding-category CODES (primary first), e.g. ['FN','ISS'].
+ * @property {string} [grantLabel] - Short human noun phrase for this org's funding area, e.g. "food and nutrition" (used in the "closing soon" Home line).
  * @property {string[]} [rtsPrompts] - Summarize/draft prompts framed to ground answers in the team's own channels via search_workspace.
  * @property {FlagshipTool} [flagship] - One tailored behavior for this org type.
  */
@@ -42,6 +43,7 @@ export const ORG_TYPES = [
       'Draft a donor thank-you for in-kind food donations',
     ],
     defaultGrantCategories: ['FN', 'ISS'],
+    grantLabel: 'food and nutrition',
     rtsPrompts: [
       'Summarize our distribution log into a monthly report',
       'Catch me up on what the team discussed about our next food drive',
@@ -73,6 +75,7 @@ export const ORG_TYPES = [
       'Find mental health and crisis funding',
     ],
     defaultGrantCategories: ['HL', 'ISS'],
+    grantLabel: 'mental health',
     rtsPrompts: [
       'Summarize what our team decided about our crisis response protocol',
       'Catch me up on our SAMHSA renewal discussion',
@@ -90,6 +93,7 @@ export const ORG_TYPES = [
       'Find youth education funding',
     ],
     defaultGrantCategories: ['ED'],
+    grantLabel: 'youth education',
     rtsPrompts: [
       'Catch me up on our summer program planning',
       'Summarize what we decided about our after-school schedule',
@@ -131,6 +135,7 @@ export const ORG_TYPES = [
       'Find refugee and immigrant services funding',
     ],
     defaultGrantCategories: ['ISS', 'CD', 'ELT'],
+    grantLabel: 'refugee and immigrant services',
     rtsPrompts: [
       'Catch me up on what the team decided about our new arrivals plan',
       'Summarize what we discussed about language-access services',
@@ -148,6 +153,7 @@ export const ORG_TYPES = [
       'Find housing and homelessness services funding',
     ],
     defaultGrantCategories: ['HO', 'ISS'],
+    grantLabel: 'housing and homelessness',
     rtsPrompts: [
       'Summarize what we discussed about our CoC application',
       'Catch me up on our coordinated entry planning',
@@ -185,6 +191,7 @@ export const ORG_TYPES = [
       'Find arts and culture funding',
     ],
     defaultGrantCategories: ['AR', 'HU'],
+    grantLabel: 'arts and culture',
     rtsPrompts: ["Summarize what we decided about next season's programming", 'Catch me up on our gala planning'],
     flagship: { kind: 'match_tracker', ratio: '1:1', source: 'NEA' },
   },

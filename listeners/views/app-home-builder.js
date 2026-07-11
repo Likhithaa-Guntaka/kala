@@ -176,10 +176,11 @@ function orgTypeRows() {
  *
  * @param {string | null} [_botUserId] - Unused; kept so existing call sites stay unchanged.
  * @param {string | null} [orgType] - The user's stored org type id, if any.
- * @param {{ firstName?: string, now?: Date, notice?: string }} [opts] - Personalization:
- *   the user's first name (for the greeting), the current time (injected for
- *   testability), and a transient `notice` banner shown once at the top (e.g. an
- *   "I sent that to your messages" confirmation) that clears on the next refresh.
+ * @param {{ firstName?: string, now?: Date, notice?: string, closingSoon?: { count: number, label: string } | null }} [opts] -
+ *   Personalization: the user's first name (for the greeting), the current time
+ *   (injected for testability), a transient `notice` banner shown once at the top,
+ *   and an optional live `closingSoon` count ({ count, label }) that renders one
+ *   informational context line — omitted entirely when null/absent.
  * @returns {import('@slack/types').HomeView}
  */
 export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
@@ -206,7 +207,15 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   if (notice) {
     blocks.push(section(notice), divider());
   }
-  blocks.push(section(TAGLINE), divider());
+  blocks.push(section(TAGLINE));
+  // Optional live "closing soon" line — strictly additive, present only when the
+  // count came back in time. Rendered as a plain context line, never a button.
+  const closingSoon = opts.closingSoon;
+  if (closingSoon && closingSoon.count > 0) {
+    const grants = closingSoon.count === 1 ? 'grant' : 'grants';
+    blocks.push(context(`${closingSoon.count} ${closingSoon.label} ${grants} closing in the next 30 days.`));
+  }
+  blocks.push(divider());
 
   blocks.push(...tailoredPromptBlocks(org));
   blocks.push(...actionCards(org));

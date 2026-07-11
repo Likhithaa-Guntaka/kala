@@ -172,6 +172,46 @@ describe('buildAppHomeView', () => {
       assertNoEmoji(view);
     });
 
+    describe('closing-soon line', () => {
+      const opts = (closingSoon) => ({ firstName: 'A', now: new Date('2026-07-10T09:00:00'), closingSoon });
+
+      it('renders one plain context line when a positive count is provided', () => {
+        const view = buildAppHomeView(null, 'food_bank', opts({ count: 5, label: 'food and nutrition' }));
+        const line = blocksOfType(view, 'context').find((b) => /closing in the next 30 days/.test(b.elements[0].text));
+        assert.ok(line, 'closing-soon context line present');
+        assert.match(line.elements[0].text, /5 food and nutrition grants closing in the next 30 days\./);
+        // It is a context line, never a button/action.
+        assert.strictEqual(line.type, 'context');
+        assertNoEmoji(view);
+      });
+
+      it('singularizes for a count of one', () => {
+        const view = buildAppHomeView(null, 'arts_culture', opts({ count: 1, label: 'arts and culture' }));
+        const line = blocksOfType(view, 'context').find((b) => /closing in the next 30 days/.test(b.elements[0].text));
+        assert.match(line.elements[0].text, /1 arts and culture grant closing/);
+      });
+
+      it('omits the line entirely when the count is null (API slow/down/failed)', () => {
+        const view = buildAppHomeView(null, 'food_bank', opts(null));
+        const has = blocksOfType(view, 'context').some((b) => /closing in the next 30 days/.test(b.elements[0].text));
+        assert.strictEqual(has, false);
+      });
+
+      it('omits the line when the count is zero (nothing closing soon)', () => {
+        const view = buildAppHomeView(null, 'food_bank', opts({ count: 0, label: 'food and nutrition' }));
+        const has = blocksOfType(view, 'context').some((b) => /closing in the next 30 days/.test(b.elements[0].text));
+        assert.strictEqual(has, false);
+      });
+
+      it('renders a normal, complete Home even with no closingSoon at all', () => {
+        const view = buildAppHomeView(null, 'food_bank', { firstName: 'A', now: new Date('2026-07-10T09:00:00') });
+        // Header, tailored row, and action cards all still present.
+        assert.ok(view.blocks.find((b) => b.type === 'header'));
+        assert.ok(block(view, 'home_tailored_prompts'));
+        assert.ok(block(view, 'quick_actions_1'));
+      });
+    });
+
     it('shows a transient notice banner near the top when one is passed', () => {
       const notice = 'Sent to your messages — open the Messages tab.';
       const view = buildAppHomeView(null, 'education', {

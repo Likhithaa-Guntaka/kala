@@ -1,6 +1,20 @@
 import { sessionStore } from '../../thread-context/index.js';
+import { getOrgTypeById } from '../org-types.js';
 import { buildAppHomeView } from './app-home-builder.js';
+import { countClosingSoon } from './closing-soon.js';
 import { fetchFirstName } from './user-name.js';
+
+/**
+ * Best-effort "closing soon" line for an org type, or null. Never throws and
+ * self-times-out inside countClosingSoon, so it can't delay or break the render.
+ * @param {import('../org-types.js').OrgType | undefined} org
+ * @returns {Promise<{ count: number, label: string } | null>}
+ */
+async function closingSoonFor(org) {
+  if (!org?.defaultGrantCategories || !org?.grantLabel) return null;
+  const count = await countClosingSoon(org.defaultGrantCategories);
+  return typeof count === 'number' && count > 0 ? { count, label: org.grantLabel } : null;
+}
 
 /**
  * Per-user generation token. Every publishHome call takes the next token for its
@@ -41,7 +55,14 @@ export async function publishHome(client, { userId, botUserId = null, notice }) 
 
   // Read the org type fresh, AFTER the await, so we never publish a stale snapshot.
   const orgType = sessionStore.getOrgType(userId);
-  const view = buildAppHomeView(botUserId, orgType, { firstName, notice });
+
+  // Best-effort live "closing soon" count for this org. Self-times-out and never
+  // throws, so a slow or down Grants.gov omits the line instead of blocking Home.
+  const closingSoon = await closingSoonFor(getOrgTypeById(orgType));
+  // A newer publish may have started during the (bounded) count fetch — let it win.
+  if (publishGen.get(userId) !== gen) return false;
+
+  const view = buildAppHomeView(botUserId, orgType, { firstName, notice, closingSoon });
   await client.views.publish({ user_id: userId, view });
   return true;
 }
