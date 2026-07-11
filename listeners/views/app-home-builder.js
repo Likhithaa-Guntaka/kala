@@ -213,6 +213,11 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
     // Nothing trails the buttons — a clean descent from name to choice.
     /** @type {import('@slack/types').KnownBlock[]} */
     const blocks = [
+      {
+        type: 'image',
+        image_url: 'https://raw.githubusercontent.com/Likhithaa-Guntaka/benvu/main/assets/benvu-wordmark.png',
+        alt_text: 'Benvu — your AI teammate for nonprofits',
+      },
       header('Benvu'),
       section(PICKER_TAGLINE),
       section(PICKER_VALUE),
