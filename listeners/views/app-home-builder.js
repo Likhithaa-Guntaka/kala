@@ -177,17 +177,6 @@ function orgTypeRows() {
 }
 
 /**
- * The stable branded header: app name, tagline, and a short description, closed
- * with a divider. Identical for every user and every org type — the personalized
- * content sits below it. Emoji-free; the app avatar renders natively in Slack's
- * Messages/DM header, so the body needs no logo image.
- * @returns {import('@slack/types').KnownBlock[]}
- */
-function brandHeaderBlocks() {
-  return [header('Benvu'), section(TAGLINE), section(DESCRIPTION), divider()];
-}
-
-/**
  * Build the App Home view.
  *
  * First open (no org type): name, purpose, a friendly setup prompt, and the
@@ -231,14 +220,10 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   // Onboarded — a warm greeting, the action cards, then a receding footer.
   const now = opts.now instanceof Date ? opts.now : new Date();
 
+  // Lead with the personalized greeting as a bold section. The branded header
+  // (Benvu name, tagline, description) lives only on the pre-selection picker.
   /** @type {import('@slack/types').KnownBlock[]} */
-  // Stable branded header first (same for everyone), then the personalized body.
-  /** @type {import('@slack/types').KnownBlock[]} */
-  const blocks = [...brandHeaderBlocks()];
-
-  // Personalized greeting as a bold section — not a second header, so "Benvu"
-  // stays the largest element.
-  blocks.push(section(`*${greeting(now, opts.firstName)}*`));
+  const blocks = [section(`*${greeting(now, opts.firstName)}*`)];
 
   // A transient confirmation banner, shown once after a Home action.
   if (notice) {
