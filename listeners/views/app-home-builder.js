@@ -19,6 +19,11 @@ export const DESCRIPTION =
   "I'm Benvu, an AI teammate for nonprofit staff. Tell me what you need, in any language, and I'll " +
   'find the grant, draft the report, or track the deadline.';
 
+/** Pre-selection (org-type picker) intro copy. Its own short, warm block set. */
+export const PICKER_TAGLINE = 'Your AI teammate for nonprofits.';
+export const PICKER_VALUE = 'I find real grants, draft your reports, and track every deadline.';
+export const PICKER_PROMPT = "What kind of work do you do? I'll tailor everything to it.";
+
 /** Value carried by the "Change organization type" control. */
 export const CHANGE_ORG_VALUE = '__change_org_type__';
 
@@ -204,13 +209,17 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   const notice = (opts.notice || '').trim();
 
   if (!org) {
-    // First open — one clear setup question, then the picker.
+    // Pre-selection: a short branded intro, then one question and the picker.
+    // Nothing trails the buttons — a clean descent from name to choice.
     /** @type {import('@slack/types').KnownBlock[]} */
-    const blocks = [header('Benvu'), section(TAGLINE)];
-    blocks.push(divider());
-    blocks.push(section('First, what kind of organization are you? Pick one so I can tailor my suggestions.'));
-    blocks.push(...orgTypeRows());
-    blocks.push(context('You can also just message me anytime, in any language.'));
+    const blocks = [
+      header('Benvu'),
+      section(PICKER_TAGLINE),
+      section(PICKER_VALUE),
+      divider(),
+      section(PICKER_PROMPT),
+      ...orgTypeRows(),
+    ];
     return { type: 'home', blocks };
   }
 

@@ -9,6 +9,9 @@ import {
   CHANGE_ORG_VALUE,
   DESCRIPTION,
   greeting,
+  PICKER_PROMPT,
+  PICKER_TAGLINE,
+  PICKER_VALUE,
   TAGLINE,
 } from '../../../listeners/views/app-home-builder.js';
 import { assertNoEmoji } from '../../helpers/no-emoji.js';
@@ -29,15 +32,18 @@ function cardButtons(view) {
 }
 
 describe('buildAppHomeView', () => {
-  it('leads with a header naming Benvu and a purpose section (first open)', () => {
+  it('leads with the Benvu name, tagline, and value line (pre-selection)', () => {
     const view = buildAppHomeView();
     assert.strictEqual(view.type, 'home');
     const h = view.blocks.find((b) => b.type === 'header');
     assert.strictEqual(h.text.text, 'Benvu');
 
     const sections = blocksOfType(view, 'section').map((b) => b.text.text);
-    assert.ok(sections.includes(TAGLINE));
-    assert.ok(TAGLINE.includes('any language'));
+    assert.ok(sections.includes(PICKER_TAGLINE));
+    assert.ok(sections.includes(PICKER_VALUE));
+    // The old branded-header copy must not leak into the picker screen.
+    assert.ok(!sections.includes(TAGLINE));
+    assert.ok(!sections.includes(DESCRIPTION));
   });
 
   it('never contains emoji in either state', () => {
@@ -46,13 +52,30 @@ describe('buildAppHomeView', () => {
   });
 
   describe('first open (no org type)', () => {
-    it('shows a setup prompt and the org-type picker, no action grid', () => {
+    it('shows the picker prompt and the org-type picker, no action grid', () => {
       const view = buildAppHomeView();
       assert.ok(block(view, 'org_type_select_1'));
       assert.ok(block(view, 'org_type_select_2'));
       assert.ok(!block(view, 'quick_actions_1'), 'no action grid before onboarding');
       const sections = blocksOfType(view, 'section').map((b) => b.text.text);
-      assert.ok(sections.some((t) => /what kind of organization/i.test(t)));
+      assert.ok(sections.includes(PICKER_PROMPT));
+    });
+
+    it('has the exact block order: Benvu, tagline, value, divider, prompt, then picker rows', () => {
+      const blocks = buildAppHomeView().blocks;
+      assert.strictEqual(blocks[0].type, 'header');
+      assert.strictEqual(blocks[0].text.text, 'Benvu');
+      assert.strictEqual(blocks[1].text.text, PICKER_TAGLINE);
+      assert.strictEqual(blocks[2].text.text, PICKER_VALUE);
+      assert.strictEqual(blocks[3].type, 'divider');
+      assert.strictEqual(blocks[4].text.text, PICKER_PROMPT);
+      // Everything after the prompt is a picker actions row — nothing trails the buttons.
+      const tail = blocks.slice(5);
+      assert.ok(tail.length > 0);
+      assert.ok(
+        tail.every((b) => b.type === 'actions' && String(b.block_id).startsWith('org_type_select_')),
+        'only picker rows follow the prompt',
+      );
     });
 
     it('offers every org type as a plain button, none primary, no emoji labels', () => {
