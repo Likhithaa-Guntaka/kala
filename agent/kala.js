@@ -6,6 +6,7 @@ import { recordTiming } from '../listeners/feedback-store.js';
 import { buildRsvpMessageBlocks, buildRsvpText } from '../listeners/views/event-rsvp-builder.js';
 import { buildScheduleAckBlocks, buildScheduleAckText } from '../listeners/views/schedule-ack-builder.js';
 import { sessionStore } from '../thread-context/index.js';
+import { isDmChannel } from './slack-channel.js';
 import { addDeadline, daysUntil } from './tools/deadline-store.js';
 import {
   addEngagement,
@@ -390,6 +391,121 @@ const SLACK_MCP_URL = 'https://mcp.slack.com/mcp';
  * @property {string} messageTs
  * @property {string} [userToken]
  */
+
+/**
+ * track_event tool handler. Extracted to module scope so its channel handling —
+ * including the DM guard that keeps a team RSVP card out of a private DM — is
+ * unit-testable without driving the model. Behavior is identical to the inline
+ * closure it replaces.
+ * @param {{ title: string, date?: string }} args
+ * @param {KalaDeps} [deps]
+ * @returns {Promise<{ content: { type: 'text', text: string }[] }>}
+ */
+export async function handleTrackEvent({ title, date }, deps) {
+  if (!deps?.channelId) {
+    return {
+      content: [{ type: 'text', text: "I can't track an event here — there's no channel to post the sign-up in." }],
+    };
+  }
+  // A team RSVP card posted into a private DM (im ids start with "D") reaches only
+  // this one user, defeating the head count — send them to a real channel instead
+  // of silently posting and claiming success.
+  if (isDmChannel(deps.channelId)) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text:
+            'RSVP tracking needs a real channel so your team can see and tap the sign-up card — a DM only reaches you. ' +
+            "Go to the channel where your team coordinates (invite me if I'm not there) and @mention me, e.g. " +
+            '`@Kala track RSVPs for the gallery opening on the 14th`.',
+        },
+      ],
+    };
+  }
+  const event = addEvent({ title, date, channelId: deps.channelId, createdBy: deps.userId, now: Date.now() });
+  // Post the RSVP card so people can confirm with the button.
+  try {
+    await deps.client.chat.postMessage({
+      channel: deps.channelId,
+      text: buildRsvpText(event),
+      blocks: buildRsvpMessageBlocks(event),
+    });
+  } catch {
+    // If posting fails, the event is still tracked; the user can add RSVPs by name.
+  }
+  const when = event.date ? ` on *${event.date}*` : '';
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Tracking RSVPs for *${event.title}*${when} (\`${event.id}\`). I posted a sign-up card with an "I'll be there" button in this channel. Ask me for the head count anytime.`,
+      },
+    ],
+  };
+}
+
+/**
+ * track_schedule_change tool handler. Extracted to module scope for the same
+ * reason as handleTrackEvent: the DM guard is directly testable. Behavior is
+ * identical to the inline closure it replaces.
+ * @param {{ change: string, who_must_confirm?: string[] }} args
+ * @param {KalaDeps} [deps]
+ * @returns {Promise<{ content: { type: 'text', text: string }[] }>}
+ */
+export async function handleTrackScheduleChange({ change, who_must_confirm }, deps) {
+  if (!deps?.channelId) {
+    return {
+      content: [{ type: 'text', text: "I can't track a schedule change here — there's no channel to post it in." }],
+    };
+  }
+  // An Acknowledge card in a private DM (im ids start with "D") reaches only this
+  // one user, so the people who must confirm never see it — send the user to a
+  // real channel instead of silently posting and claiming success.
+  if (isDmChannel(deps.channelId)) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text:
+            'Acknowledgment tracking needs a real channel so the people who must confirm can see and tap the card — ' +
+            "a DM only reaches you. Go to the team's channel (invite me if I'm not there) and @mention me, e.g. " +
+            '`@Kala track this schedule change: tech rehearsal moved to 9am Saturday, everyone needs to confirm`.',
+        },
+      ],
+    };
+  }
+  const record = addScheduleChange({
+    change,
+    people: who_must_confirm ?? [],
+    channelId: deps.channelId,
+    createdBy: deps.userId,
+    now: Date.now(),
+  });
+  // Post the acknowledgment card and remember it so reactions on it count.
+  try {
+    const posted = await deps.client.chat.postMessage({
+      channel: deps.channelId,
+      text: buildScheduleAckText(record),
+      blocks: buildScheduleAckBlocks(record),
+    });
+    if (posted?.ts) setMessageRef(record.id, { channel: deps.channelId, ts: /** @type {string} */ (posted.ts) });
+  } catch {
+    // If posting fails, the change is still tracked; acks can be added by name.
+  }
+  const n = record.roster.length;
+  const rosterNote = n
+    ? `${n} ${n === 1 ? 'person needs' : 'people need'} to confirm`
+    : 'no one is on the confirm list yet — tell me who needs to confirm';
+  return {
+    content: [
+      {
+        type: 'text',
+        text: `Tracking this schedule change (\`${record.id}\`) and posted an "Acknowledge" card to the channel — ${rosterNote}. Ask me anytime who hasn't confirmed.`,
+      },
+    ],
+  };
+}
 
 /**
  * Run the Kala agent with the given text and optional session ID.
@@ -796,33 +912,7 @@ export async function runKalaAgent(text, sessionId = undefined, deps = undefined
       title: z.string().describe('The event name, e.g. "Gallery Opening".'),
       date: z.string().optional().describe('When it happens, ideally YYYY-MM-DD (convert a plain date the user gave).'),
     },
-    async ({ title, date }) => {
-      if (!deps?.channelId) {
-        return {
-          content: [{ type: 'text', text: "I can't track an event here — there's no channel to post the sign-up in." }],
-        };
-      }
-      const event = addEvent({ title, date, channelId: deps.channelId, createdBy: deps.userId, now: Date.now() });
-      // Post the RSVP card so people can confirm with the button.
-      try {
-        await deps.client.chat.postMessage({
-          channel: deps.channelId,
-          text: buildRsvpText(event),
-          blocks: buildRsvpMessageBlocks(event),
-        });
-      } catch {
-        // If posting fails, the event is still tracked; the user can add RSVPs by name.
-      }
-      const when = event.date ? ` on *${event.date}*` : '';
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Tracking RSVPs for *${event.title}*${when} (\`${event.id}\`). I posted a sign-up card with an "I'll be there" button in this channel. Ask me for the head count anytime.`,
-          },
-        ],
-      };
-    },
+    (args) => handleTrackEvent(args, deps),
   );
 
   const updateEventTool = tool(
@@ -920,43 +1010,7 @@ export async function runKalaAgent(text, sessionId = undefined, deps = undefined
         .optional()
         .describe('The people who must acknowledge — Slack mentions (<@U…>) when the user @-mentioned them, or names.'),
     },
-    async ({ change, who_must_confirm }) => {
-      if (!deps?.channelId) {
-        return {
-          content: [{ type: 'text', text: "I can't track a schedule change here — there's no channel to post it in." }],
-        };
-      }
-      const record = addScheduleChange({
-        change,
-        people: who_must_confirm ?? [],
-        channelId: deps.channelId,
-        createdBy: deps.userId,
-        now: Date.now(),
-      });
-      // Post the acknowledgment card and remember it so reactions on it count.
-      try {
-        const posted = await deps.client.chat.postMessage({
-          channel: deps.channelId,
-          text: buildScheduleAckText(record),
-          blocks: buildScheduleAckBlocks(record),
-        });
-        if (posted?.ts) setMessageRef(record.id, { channel: deps.channelId, ts: /** @type {string} */ (posted.ts) });
-      } catch {
-        // If posting fails, the change is still tracked; acks can be added by name.
-      }
-      const n = record.roster.length;
-      const rosterNote = n
-        ? `${n} ${n === 1 ? 'person needs' : 'people need'} to confirm`
-        : 'no one is on the confirm list yet — tell me who needs to confirm';
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `Tracking this schedule change (\`${record.id}\`) and posted an "Acknowledge" card to the channel — ${rosterNote}. Ask me anytime who hasn't confirmed.`,
-          },
-        ],
-      };
-    },
+    (args) => handleTrackScheduleChange(args, deps),
   );
 
   const acknowledgeChangeTool = tool(
