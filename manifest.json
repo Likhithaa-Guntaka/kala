@@ -1,7 +1,7 @@
 {
   "display_information": {
     "name": "Kala",
-    "description": "Kala is your arts & culture nonprofit’s AI teammate: finds grants, drafts reports and donor notes, and tracks deadlines — in any language.",
+    "description": "AI teammate for arts and culture nonprofits. Finds real grants, tracks artist engagements, manages RSVPs, and handles the admin.",
     "long_description": "Kala helps small arts and culture nonprofits get more done without adding headcount. Here is what it can do:\n\n🌱 Find funding — search real, open U.S. federal arts and culture grants that fit your mission and budget, and track the nonfederal match many arts grants require.\n📝 Do the writing — draft impact reports, donor thank-yous, and volunteer shift announcements from a few quick notes, then post them straight to a channel.\n⏰ Keep track — remember a deadline and nudge your team in Slack before it is due.\n🗒️ Catch up fast — turn messy meeting notes into a clean summary with decisions and action items.\n🔎 Stay grounded — search your team’s past messages and files so answers reflect what people actually said.\n\nKala is built for arts and culture organizations — performing arts groups, museums, galleries, and community arts and cultural institutions — with funding, reports, and metrics tailored to that work. And it works in any language — write to it however you are comfortable, and it replies the same way."
   },
   "features": {
