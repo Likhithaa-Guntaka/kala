@@ -183,7 +183,14 @@ export function buildAppHomeView(_botUserId = null, opts = {}) {
   const now = opts.now instanceof Date ? opts.now : new Date();
 
   /** @type {import('@slack/types').KnownBlock[]} */
-  const blocks = [section(`*${greeting(now, opts.firstName)}*`)];
+  const blocks = [
+    {
+      type: 'image',
+      image_url: 'https://raw.githubusercontent.com/Likhithaa-Guntaka/kala/main/assets/kala-wordmark.png',
+      alt_text: 'Kala — your AI teammate for arts and culture nonprofits',
+    },
+    section(`*${greeting(now, opts.firstName)}*`),
+  ];
 
   if (notice) {
     blocks.push(section(notice));
