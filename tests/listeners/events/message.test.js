@@ -28,8 +28,8 @@ describe('agentPromptFor', () => {
   });
 
   it('falls back to the message text for a normal message (no issue metadata)', () => {
-    const event = { text: 'find grants for a food bank in Ohio' };
-    assert.strictEqual(agentPromptFor(null, event), 'find grants for a food bank in Ohio');
+    const event = { text: 'find grants for a community theater in Ohio' };
+    assert.strictEqual(agentPromptFor(null, event), 'find grants for a community theater in Ohio');
   });
 
   it('falls back to the message text if an issue submission somehow has no prompt', () => {

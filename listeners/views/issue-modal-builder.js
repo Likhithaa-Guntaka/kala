@@ -14,6 +14,9 @@ const SUBMIT_LABELS = {
   'Summarize Meeting Notes': 'Summarize',
   'Draft Donor Thank You': 'Draft note',
   'Create Volunteer Announcement': 'Create post',
+  'Track an Engagement': 'Track engagement',
+  'Track Event RSVPs': 'Track RSVPs',
+  'Track a Schedule Change': 'Track change',
 };
 
 /**
@@ -25,12 +28,12 @@ export function buildIssueModal(category) {
   /** @type {import('@slack/types').PlainTextOption[]} */
   const categoryOptions = CATEGORIES.map((cat) => ({ text: plain(cat.value), value: cat.value }));
   const initialOption = categoryOptions.find((opt) => opt.value === category) || categoryOptions[0];
-  const submitLabel = SUBMIT_LABELS[initialOption.value || ''] || 'Send to Benvu';
+  const submitLabel = SUBMIT_LABELS[initialOption.value || ''] || 'Send to Kala';
 
   return {
     type: 'modal',
     callback_id: 'issue_submission',
-    title: plain('How can Benvu help?', 24),
+    title: plain('How can Kala help?', 24),
     submit: plain(submitLabel, 24),
     close: plain('Cancel', 24),
     blocks: [

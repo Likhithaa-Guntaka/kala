@@ -161,15 +161,15 @@ function isoDeadline(date) {
  * the agent's prose is unaffected).
  * @param {{ query: string, category?: string, location?: string, maxAmount?: number, defaultCategoryCodes?: string[] }} args
  *   `category` is the user's plain-language category (mapped to one code and it
- *   wins when present). `defaultCategoryCodes` are the active org type's default
+ *   wins when present). `defaultCategoryCodes` are Kala's default arts and culture
  *   Grants.gov codes (primary first), used only when the user named no category.
  * @returns {Promise<{ grants: GrantResult[], text: string }>}
  */
 export async function searchGrants({ query, category, location, maxAmount, defaultCategoryCodes }) {
   try {
     // 1. Resolve the funding-category filter. An explicit user category wins;
-    // otherwise fall back to the org type's defaults. Drop unknown codes (logged)
-    // so a bad code becomes an unfiltered search, never a wrong filter.
+    // otherwise fall back to the arts and culture defaults. Drop unknown codes
+    // (logged) so a bad code becomes an unfiltered search, never a wrong filter.
     const userCode = category ? CATEGORY_CODES[category.trim().toLowerCase()] : undefined;
     const requested = userCode ? [userCode] : (defaultCategoryCodes ?? []);
     const codes = requested.filter((c) => {
@@ -242,7 +242,7 @@ export async function searchGrants({ query, category, location, maxAmount, defau
 
     const results = picked.slice(0, 5);
 
-    // 4. Format cleanly. Benvu will present this in the user's language.
+    // 4. Format cleanly. Kala will present this in the user's language.
     const lines = results.map((g, i) => {
       const amount = g.amount != null ? `up to ${formatUsd(g.amount)}` : 'not listed';
       return `${i + 1}. *${g.title}*\n   Agency: ${g.agency}\n   Award: ${amount} · Closes: ${g.deadline}\n   ${g.url}`;
@@ -267,7 +267,7 @@ export async function searchGrants({ query, category, location, maxAmount, defau
  * Build the find_grants tool. `onResults` receives the structured grants each
  * time the tool runs, so the caller can render native cards. The text returned
  * to the model is unchanged, so the agent's reasoning and prose are unaffected.
- * `defaultCategoryCodes` are the active org type's Grants.gov defaults, applied
+ * `defaultCategoryCodes` are the arts and culture Grants.gov defaults, applied
  * only when the user's query names no category of its own.
  * @param {(grants: GrantResult[]) => void} [onResults]
  * @param {string[]} [defaultCategoryCodes]

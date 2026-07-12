@@ -1,12 +1,11 @@
-import { runBenvuAgent } from '../../agent/index.js';
+import { runKalaAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
-import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
 
 /**
- * Handle app_mention events and run the Benvu agent.
+ * Handle app_mention events and run the Kala agent.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'app_mention'>} args
  * @returns {Promise<void>}
  */
@@ -22,7 +21,7 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
 
     if (!cleanedText) {
       await say({
-        text: "Hi! I'm Benvu. Tell me what you need, in any language, and I'll help you find grants, draft reports, or track deadlines.",
+        text: "Hi! I'm Kala. Tell me what you need, in any language, and I'll help you find grants, draft reports, or track deadlines.",
         thread_ts: threadTs,
       });
       return;
@@ -37,15 +36,13 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
       });
     }
 
-    // Show a native assistant-thread status while Benvu works.
+    // Show a native assistant-thread status while Kala works.
     await setAssistantStatus(client, channelId, threadTs, statusForMessage(cleanedText));
 
     // Get conversation session
     const existingSessionId = sessionStore.getSession(channelId, threadTs);
 
     // Run the agent with deps for tool access
-    const orgTypeId = sessionStore.getOrgType(userId);
-    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -53,14 +50,12 @@ export async function handleAppMentioned({ client, context, event, logger, say, 
       threadTs,
       messageTs: event.ts,
       userToken: context.userToken,
-      orgType,
-      orgTypeId,
     };
     const {
       responseText,
       sessionId: newSessionId,
       grants,
-    } = await runBenvuAgent(cleanedText, existingSessionId ?? undefined, deps);
+    } = await runKalaAgent(cleanedText, existingSessionId ?? undefined, deps);
 
     // Clear the status before streaming the reply.
     await setAssistantStatus(client, channelId, threadTs, '');

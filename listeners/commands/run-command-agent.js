@@ -1,12 +1,10 @@
-import { runBenvuAgent } from '../../agent/index.js';
-import { sessionStore } from '../../thread-context/index.js';
-import { getOrgTypeById } from '../org-types.js';
+import { runKalaAgent } from '../../agent/index.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
 
 /**
  * Shared runner for slash commands: shows a "thinking" indicator, runs the
- * Benvu agent with a crafted prompt, and posts the result in the channel where
+ * Kala agent with a crafted prompt, and posts the result in the channel where
  * the command was typed. Uses response_url (respond), so it works in any channel
  * without the bot needing to be a member.
  *
@@ -24,12 +22,10 @@ import { grantCardsFor } from '../views/grant-results-builder.js';
  * @returns {Promise<void>}
  */
 export async function runCommandAgent({ respond, client, command, context, prompt, logger }) {
-  await respond({ response_type: 'in_channel', text: '_Benvu is thinking…_' });
+  await respond({ response_type: 'in_channel', text: '_Kala is thinking…_' });
 
   try {
     const userId = command.user_id;
-    const orgTypeId = sessionStore.getOrgType(userId);
-    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -37,11 +33,9 @@ export async function runCommandAgent({ respond, client, command, context, promp
       threadTs: '',
       messageTs: '',
       userToken: context.userToken,
-      orgType,
-      orgTypeId,
     };
 
-    const { responseText, grants } = await runBenvuAgent(prompt, undefined, deps);
+    const { responseText, grants } = await runKalaAgent(prompt, undefined, deps);
     await respond({
       replace_original: true,
       response_type: 'in_channel',

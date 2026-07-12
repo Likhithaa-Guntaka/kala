@@ -31,11 +31,12 @@ function draftReport(impact) {
     'and adjusted our approach along the way based on what we learned.\n\n' +
     'Our Impact\n' +
     '----------\n' +
-    '• People reached: [add the number of people served]\n' +
-    '• Key outcome: [describe the main change or result you saw]\n' +
+    '• Audience reached: [add attendance or number of people engaged]\n' +
+    '• Artists supported: [number of artists paid, commissioned, or featured]\n' +
+    '• Community engagement: [describe programs, workshops, or outreach and who they reached]\n' +
     '• A story that matters: [share one short story that shows the impact]\n\n' +
-    `Because of this work, more people benefited from our efforts to ${summary}, and the results ` +
-    'point to a meaningful, lasting difference.\n\n' +
+    `Because of this work, more people connected with our efforts to ${summary}, and the results ` +
+    'point to a meaningful, lasting difference for the artists and audiences we serve.\n\n' +
     'Looking Ahead\n' +
     '-------------\n' +
     'Building on this progress, we plan to deepen and expand this work in the coming period. ' +
@@ -63,7 +64,9 @@ export function createDraftImpactReportTool(onDraft) {
     {
       impact: z
         .string()
-        .describe('A one-line description of the impact the organization made, e.g. "fed 500 families this winter".'),
+        .describe(
+          'A one-line description of the impact the organization made, e.g. "brought free theater to 1,200 students this season".',
+        ),
     },
     async ({ impact }) => {
       const report = draftReport(impact);

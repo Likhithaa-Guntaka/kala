@@ -1,7 +1,6 @@
-import { runBenvuAgent } from '../../agent/index.js';
+import { runKalaAgent } from '../../agent/index.js';
 import { sessionStore } from '../../thread-context/index.js';
 import { setAssistantStatus, statusForMessage } from '../assistant-status.js';
-import { getOrgTypeById } from '../org-types.js';
 import { buildFeedbackBlocks } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
 
@@ -41,7 +40,7 @@ export function agentPromptFor(issueMetadata, event) {
 }
 
 /**
- * Handle messages sent to Benvu via DM or in threads the bot is part of.
+ * Handle messages sent to Kala via DM or in threads the bot is part of.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'message'>} args
  * @returns {Promise<void>}
  */
@@ -91,12 +90,10 @@ export async function handleMessage({ client, context, event, logger, say, saySt
       });
     }
 
-    // Show a native assistant-thread status while Benvu works.
+    // Show a native assistant-thread status while Kala works.
     await setAssistantStatus(client, channelId, threadTs, statusForMessage(text));
 
     // Run the agent with deps for tool access
-    const orgTypeId = sessionStore.getOrgType(userId);
-    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -104,14 +101,12 @@ export async function handleMessage({ client, context, event, logger, say, saySt
       threadTs,
       messageTs: event.ts,
       userToken: context.userToken,
-      orgType,
-      orgTypeId,
     };
     const {
       responseText,
       sessionId: newSessionId,
       grants,
-    } = await runBenvuAgent(text, existingSessionId ?? undefined, deps);
+    } = await runKalaAgent(text, existingSessionId ?? undefined, deps);
 
     // Clear the status, then stream the response in thread with grant cards
     // (when the search ran) and the feedback buttons.

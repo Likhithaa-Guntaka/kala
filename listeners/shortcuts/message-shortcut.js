@@ -1,9 +1,7 @@
-import { runBenvuAgent } from '../../agent/index.js';
-import { sessionStore } from '../../thread-context/index.js';
-import { getOrgTypeById } from '../org-types.js';
+import { runKalaAgent } from '../../agent/index.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
-import { buildSendToBenvuModal } from '../views/shortcut-modal-builder.js';
+import { buildSendToKalaModal } from '../views/shortcut-modal-builder.js';
 
 /**
  * Maps a modal choice to the agent prompt built from the message text. Keys must
@@ -18,19 +16,19 @@ const PROMPTS = {
 };
 
 /**
- * "Send to Benvu" message shortcut: opens a modal with the message pre-filled and
+ * "Send to Kala" message shortcut: opens a modal with the message pre-filled and
  * the action choices.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackShortcutMiddlewareArgs<import('@slack/bolt').MessageShortcut>} args
  * @returns {Promise<void>}
  */
-export async function handleSendToBenvuShortcut({ ack, shortcut, client, logger }) {
+export async function handleSendToKalaShortcut({ ack, shortcut, client, logger }) {
   await ack();
 
   try {
     const text = shortcut.message?.text || '';
-    await client.views.open({ trigger_id: shortcut.trigger_id, view: buildSendToBenvuModal(text) });
+    await client.views.open({ trigger_id: shortcut.trigger_id, view: buildSendToKalaModal(text) });
   } catch (e) {
-    logger.error(`Failed to open Send to Benvu modal: ${e}`);
+    logger.error(`Failed to open Send to Kala modal: ${e}`);
   }
 }
 
@@ -39,7 +37,7 @@ export async function handleSendToBenvuShortcut({ ack, shortcut, client, logger 
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackViewMiddlewareArgs<import('@slack/bolt').ViewSubmitAction>} args
  * @returns {Promise<void>}
  */
-export async function handleSendToBenvuSubmit({ ack, body, view, client, context, logger }) {
+export async function handleSendToKalaSubmit({ ack, body, view, client, context, logger }) {
   await ack();
 
   try {
@@ -62,12 +60,10 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
     }
 
     // Post a working indicator, then update it with the result.
-    const thinking = await client.chat.postMessage({ channel: channelId, text: '_Benvu is working on that…_' });
+    const thinking = await client.chat.postMessage({ channel: channelId, text: '_Kala is working on that…_' });
     const thinkingTs = /** @type {string} */ (thinking.ts);
 
     const prompt = (PROMPTS[choice] || PROMPTS.summarize)(text);
-    const orgTypeId = sessionStore.getOrgType(userId);
-    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId,
@@ -75,11 +71,9 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
       threadTs: thinkingTs,
       messageTs: thinkingTs,
       userToken: context.userToken,
-      orgType,
-      orgTypeId,
     };
 
-    const { responseText, grants } = await runBenvuAgent(prompt, undefined, deps);
+    const { responseText, grants } = await runKalaAgent(prompt, undefined, deps);
     await client.chat.update({
       channel: channelId,
       ts: thinkingTs,
@@ -87,6 +81,6 @@ export async function handleSendToBenvuSubmit({ ack, body, view, client, context
       blocks: buildAgentReply(responseText, grantCardsFor(grants, text)),
     });
   } catch (e) {
-    logger.error(`Failed to process Send to Benvu submission: ${e}`);
+    logger.error(`Failed to process Send to Kala submission: ${e}`);
   }
 }

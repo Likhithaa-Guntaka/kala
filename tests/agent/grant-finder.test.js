@@ -124,7 +124,7 @@ describe('createFindGrantsTool passthrough', () => {
   });
   afterEach(() => restore());
 
-  it('invokes onResults with the structured grants while returning the text (the runBenvuAgent capture mechanism)', async () => {
+  it('invokes onResults with the structured grants while returning the text (the runKalaAgent capture mechanism)', async () => {
     /** @type {any[]} */
     const collected = [];
     const tool = createFindGrantsTool((grants) => {

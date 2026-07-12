@@ -1,6 +1,13 @@
 import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
+import {
+  _resetScheduleChanges,
+  ackSummary,
+  addScheduleChange,
+  getScheduleChange,
+  setMessageRef,
+} from '../../../agent/tools/schedule-store.js';
 import { handleReactionAdded } from '../../../listeners/events/reaction-added.js';
 
 describe('handleReactionAdded', () => {
@@ -14,7 +21,7 @@ describe('handleReactionAdded', () => {
       conversations: { history: mock.fn(async () => ({ messages: [{ text: 'quarterly meeting notes' }] })) },
       chat: { postMessage: mock.fn(async () => ({ ok: true, ts: '1' })) },
     };
-    context = { botUserId: 'UBENVU' };
+    context = { botUserId: 'UKALA' };
     logger = { error: mock.fn() };
   });
 
@@ -36,8 +43,8 @@ describe('handleReactionAdded', () => {
     assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
   });
 
-  it("ignores Benvu's own reactions", async () => {
-    await handleReactionAdded({ event: msg('moneybag', 'UBENVU', '2.1'), client, context, logger });
+  it("ignores Kala's own reactions", async () => {
+    await handleReactionAdded({ event: msg('moneybag', 'UKALA', '2.1'), client, context, logger });
     assert.strictEqual(client.users.info.mock.callCount(), 0);
     assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
   });
@@ -62,5 +69,41 @@ describe('handleReactionAdded', () => {
     await handleReactionAdded({ event, client, context, logger });
     await handleReactionAdded({ event, client, context, logger });
     assert.strictEqual(client.chat.postMessage.mock.callCount(), 1);
+  });
+
+  describe('schedule-change acknowledgment via reaction', () => {
+    beforeEach(() => {
+      _resetScheduleChanges();
+      client.chat.update = mock.fn(async () => ({ ok: true }));
+    });
+
+    it('any reaction on a tracked change card records an ack and refreshes the card', async () => {
+      const c = addScheduleChange({ change: 'Call time 8am', people: ['<@UHUMAN>', '<@U2>'], channelId: 'C1' });
+      setMessageRef(c.id, { channel: 'C1', ts: '900.1' });
+
+      // 'tada' is NOT an agent-trigger emoji — proves ANY reaction confirms.
+      await handleReactionAdded({ event: msg('tada', 'UHUMAN', '900.1'), client, context, logger });
+
+      assert.strictEqual(ackSummary(getScheduleChange(c.id)).acked, 1);
+      assert.strictEqual(client.chat.update.mock.callCount(), 1, 'card refreshed in place');
+      // It short-circuits before the agent-trigger path (no user lookup / no post).
+      assert.strictEqual(client.users.info.mock.callCount(), 0);
+      assert.strictEqual(client.chat.postMessage.mock.callCount(), 0);
+    });
+
+    it('dedupes the same acknowledgment reaction delivered twice', async () => {
+      const c = addScheduleChange({ change: 'x', people: ['<@UHUMAN>'], channelId: 'C1' });
+      setMessageRef(c.id, { channel: 'C1', ts: '902.1' });
+      const event = msg('white_check_mark', 'UHUMAN', '902.1');
+      await handleReactionAdded({ event, client, context, logger });
+      await handleReactionAdded({ event, client, context, logger });
+      assert.strictEqual(ackSummary(getScheduleChange(c.id)).acked, 1);
+      assert.strictEqual(client.chat.update.mock.callCount(), 1);
+    });
+
+    it('leaves reactions on untracked messages to the normal trigger routing', async () => {
+      await handleReactionAdded({ event: msg('thumbsup', 'UHUMAN', '903.1'), client, context, logger });
+      assert.strictEqual(client.chat.update.mock.callCount(), 0);
+    });
   });
 });

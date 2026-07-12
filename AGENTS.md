@@ -1,6 +1,6 @@
 # AGENTS.md - claude-agent-sdk
 
-JavaScript implementation of Benvu — a nonprofit assistant agent that helps staff find grants, draft impact reports, and track deadlines, and replies in the user's own language — built with the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) (`@anthropic-ai/claude-agent-sdk`).
+JavaScript implementation of Kala — an assistant agent for **arts and culture nonprofits** that helps staff find arts funding, draft impact reports, and track deadlines, and replies in the user's own language — built with the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) (`@anthropic-ai/claude-agent-sdk`). Arts and culture is Kala's only focus — there is no org-type selection; the tailoring (grant categories, report metrics, NEA match tracking) lives in `listeners/arts-culture.js`.
 
 See the [root AGENTS.md](../AGENTS.md) for monorepo-wide architecture and shared patterns.
 
@@ -62,7 +62,7 @@ npm test             # Run all tests
 
 ### Agent Layer
 
-The agent is defined in `agent/benvu.js` using the Claude Agent SDK:
+The agent is defined in `agent/kala.js` using the Claude Agent SDK:
 
 - `query({ prompt, options })` returns an async generator of messages
 - Tools are defined with `tool()` from the SDK using Zod v4 schemas
@@ -70,9 +70,9 @@ The agent is defined in `agent/benvu.js` using the Claude Agent SDK:
 - Tools return MCP `CallToolResult` format: `{ content: [{ type: 'text', text }] }`
 - `permissionMode: 'bypassPermissions'` since all tools are safe
 - Model: `claude-sonnet-4-20250514`
-- The system prompt instructs Benvu to detect the user's language and respond in it
+- The system prompt instructs Kala to detect the user's language and respond in it
 
-**Authentication.** No external API key is required. The Claude Agent SDK authenticates via the logged-in Claude Code session (subscription / OAuth) when `ANTHROPIC_API_KEY` is unset — this is how Benvu runs in the sandbox. `agent/benvu.js` strips empty or placeholder keys (so a leftover `.env` value can't override the session) and exports `AUTH_MODE` (`'claude-code-session'` or `'api-key'`), which the app logs at startup. Set a real `sk-ant-…` key only to use the external API instead.
+**Authentication.** No external API key is required. The Claude Agent SDK authenticates via the logged-in Claude Code session (subscription / OAuth) when `ANTHROPIC_API_KEY` is unset — this is how Kala runs in the sandbox. `agent/kala.js` strips empty or placeholder keys (so a leftover `.env` value can't override the session) and exports `AUTH_MODE` (`'claude-code-session'` or `'api-key'`), which the app logs at startup. Set a real `sk-ant-…` key only to use the external API instead.
 
 ### Conversation Management
 
@@ -82,16 +82,22 @@ The store uses a `Map` keyed by `${channelId}:${threadTs}` with TTL-based cleanu
 
 ### Dependency Injection
 
-`runBenvuAgent(text, sessionId, deps)` accepts an optional `deps` object with `{ client, userId, channelId, threadTs, messageTs, userToken, orgType }`. Tools that need Slack context (emoji reactions, mark resolved, post to channel, track deadline) are created as closures inside `runBenvuAgent()` that capture the `deps` parameter. Stateless tools (grant finder, report drafter, etc.) remain as module-level exports in `agent/tools/`.
+`runKalaAgent(text, sessionId, deps)` accepts an optional `deps` object with `{ client, userId, channelId, threadTs, messageTs, userToken }`. Tools that need Slack context (emoji reactions, mark resolved, post to channel, track deadline) are created as closures inside `runKalaAgent()` that capture the `deps` parameter. Stateless tools (grant finder, report drafter, etc.) remain as module-level exports in `agent/tools/`.
 
 ### Tool Definitions
 
-`agent/tools/` contains three nonprofit assistant tools (all return simulated data):
+`agent/tools/` contains Kala's assistant tools and their stores (grant/report tools return simulated data; the trackers hold real in-process state):
 
 - `grant-finder.js` — `find_grants(query)` returns up to 10 grants with name, deadline, amount, and eligibility.
 - `report-drafter.js` — `draft_impact_report(impact)` expands a one-line impact description into a full report draft.
-- `rts.js` — `search_workspace` (closure in `agent/benvu.js`) searches the team's Slack workspace in real time via the **Real-Time Search API** (`assistant.search.context`), using `deps.userToken`. Returns message/file snippets with permalinks for the agent to summarize.
-- `track_deadline` (closure in `agent/benvu.js`, backed by `agent/tools/deadline-store.js`) — records a deadline bound to the Slack channel/user. The background `agent/deadline-scheduler.js` loop (started from `app.js` / `app-oauth.js`) reads `getDueDeadlines()` and posts a Slack reminder once per deadline before it's due.
+- `rts.js` — `search_workspace` (closure in `agent/kala.js`) searches the team's Slack workspace in real time via the **Real-Time Search API** (`assistant.search.context`), using `deps.userToken`. Returns message/file snippets with permalinks for the agent to summarize.
+- `track_deadline` (closure in `agent/kala.js`, backed by `agent/tools/deadline-store.js`) — records a deadline bound to the Slack channel/user. The background `agent/deadline-scheduler.js` loop (started from `app.js` / `app-oauth.js`) reads `getDueDeadlines()` and posts a Slack reminder once per deadline before it's due.
+
+**Operational trackers.** Three channel-scoped, persistent-state features. Each pairs a process-local store in `agent/tools/` (same Map pattern as `deadline-store` / `match-store`, with a `_reset*()` test helper) with closure tools in `agent/kala.js`; the two interactive ones also have a view builder and a button/reaction handler:
+
+- **Artist & contractor engagements** — `engagement-store.js`; tools `track_engagement` / `update_engagement` / `engagement_status`. Tracks each engagement's contract, W-9, and invoice status, with overdue rules (contract sent > 7d unsigned, invoice submitted > 14d unpaid).
+- **Free event RSVPs & attendance** — `event-store.js`; tools `track_event` / `update_event` / `event_status`. `track_event` posts an "I'll be there" RSVP card (`listeners/views/event-rsvp-builder.js`); the button is handled by `listeners/actions/event-buttons.js`. `event_status` feeds real attendance numbers into `draft_impact_report`.
+- **Schedule-change acknowledgments** — `schedule-store.js`; tools `track_schedule_change` / `acknowledge_change` / `schedule_status`. `track_schedule_change` posts an "Acknowledge" card (`listeners/views/schedule-ack-builder.js`); acks arrive via the button (`listeners/actions/schedule-buttons.js`) **or** any reaction on the card (`listeners/events/reaction-added.js`). `schedule_status` returns the who-hasn't-confirmed list.
 
 Tools in `agent/tools/` are defined using `tool()` from the Claude Agent SDK:
 

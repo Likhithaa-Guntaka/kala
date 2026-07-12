@@ -2,7 +2,7 @@ import { formatFeedbackSummary } from '../feedback-store.js';
 import { buildFeedbackSummaryBlocks } from '../views/command-builder.js';
 
 /**
- * /benvu-feedback — (admin) show a summary of thumbs-up/down feedback.
+ * /kala-feedback — (admin) show a summary of thumbs-up/down feedback.
  * Responds ephemerally, so the summary is only visible to whoever runs it.
  * @param {import('@slack/bolt').SlackCommandMiddlewareArgs & import('@slack/bolt').AllMiddlewareArgs} args
  * @returns {Promise<void>}

@@ -1,8 +1,8 @@
 /**
  * In-memory store of tracked grant/compliance deadlines.
  *
- * This is the persistence half of Benvu's deadline feature: `track_deadline`
- * (in `agent/benvu.js`) writes here, and the background scheduler (in
+ * This is the persistence half of Kala's deadline feature: `track_deadline`
+ * (in `agent/kala.js`) writes here, and the background scheduler (in
  * `agent/deadline-scheduler.js`) reads `getDueDeadlines()` to post Slack nudges.
  *
  * NOTE: process-local — resets on restart. Back it with a database (or the

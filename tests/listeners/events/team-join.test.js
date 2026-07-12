@@ -15,7 +15,7 @@ describe('handleTeamJoin', () => {
     fakeLogger = { error: mock.fn() };
   });
 
-  it('opens a DM and sends the onboarding welcome with org-type buttons', async () => {
+  it('opens a DM and sends the arts and culture welcome with tailored prompt buttons', async () => {
     // Distinct user id per test — the handler dedupes by user id across calls.
     const event = { type: 'team_join', user: { id: 'U_WELCOME' } };
     await handleTeamJoin({ event, client: fakeClient, logger: fakeLogger });
@@ -24,11 +24,14 @@ describe('handleTeamJoin', () => {
     assert.strictEqual(fakeClient.chat.postMessage.mock.callCount(), 1);
     const msg = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
     assert.strictEqual(msg.channel, 'D999');
-    assert.ok(msg.text.includes("I'm Benvu"), 'has fallback text');
+    assert.ok(msg.text.includes("I'm Kala"), 'has fallback text');
+    assert.match(msg.text, /arts and culture/i);
     assert.ok(!msg.text.includes('👋'), 'no wave emoji in fallback');
-    const orgBlock = msg.blocks.find((b) => b.block_id === 'org_type_select');
-    assert.ok(orgBlock, 'includes the org-type question buttons');
-    assert.ok(orgBlock.elements.every((el) => el.action_id.startsWith('orgtype_')));
+    // No org-type picker — the welcome offers tailored prompts directly.
+    assert.ok(!msg.blocks.some((b) => b.block_id === 'org_type_select'), 'no org-type picker');
+    const promptBlock = msg.blocks.find((b) => b.block_id === 'tailored_prompts');
+    assert.ok(promptBlock, 'includes the tailored prompt buttons');
+    assert.ok(promptBlock.elements.every((el) => el.action_id.startsWith('prompt_run_')));
   });
 
   it('welcomes each member only once, even if the event fires twice', async () => {

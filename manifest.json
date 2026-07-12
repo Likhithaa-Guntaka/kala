@@ -1,15 +1,15 @@
 {
   "display_information": {
-    "name": "benvu",
-    "description": "Benvu is your nonprofit’s AI teammate: finds grants, drafts reports and donor notes, and tracks deadlines — in any language.",
-    "long_description": "Benvu helps small nonprofit teams get more done without adding headcount. Here is what it can do:\n\n🌱 Find funding — search real, open U.S. federal grants that fit your mission and budget.\n📝 Do the writing — draft impact reports, donor thank-yous, and volunteer shift announcements from a few quick notes, then post them straight to a channel.\n⏰ Keep track — remember a deadline and nudge your team in Slack before it is due.\n🗒️ Catch up fast — turn messy meeting notes into a clean summary with decisions and action items.\n🔎 Stay grounded — search your team’s past messages and files so answers reflect what people actually said.\n\nBenvu tailors its suggestions to your work, whether you run a food bank, a mental health or crisis line, a school or youth program, an immigrant and refugee service, an arts group, or a general nonprofit. And it works in any language — write to it however you are comfortable, and it replies the same way."
+    "name": "Kala",
+    "description": "Kala is your arts & culture nonprofit’s AI teammate: finds grants, drafts reports and donor notes, and tracks deadlines — in any language.",
+    "long_description": "Kala helps small arts and culture nonprofits get more done without adding headcount. Here is what it can do:\n\n🌱 Find funding — search real, open U.S. federal arts and culture grants that fit your mission and budget, and track the nonfederal match many arts grants require.\n📝 Do the writing — draft impact reports, donor thank-yous, and volunteer shift announcements from a few quick notes, then post them straight to a channel.\n⏰ Keep track — remember a deadline and nudge your team in Slack before it is due.\n🗒️ Catch up fast — turn messy meeting notes into a clean summary with decisions and action items.\n🔎 Stay grounded — search your team’s past messages and files so answers reflect what people actually said.\n\nKala is built for arts and culture organizations — performing arts groups, museums, galleries, and community arts and cultural institutions — with funding, reports, and metrics tailored to that work. And it works in any language — write to it however you are comfortable, and it replies the same way."
   },
   "features": {
     "agent_view": {
-      "agent_description": "Benvu is a teammate for nonprofit staff who wear ten hats and never have enough hours. Tell it what you need — grants to chase, a report due, a donor to thank — and it finds the answer or writes the first draft in seconds, in whatever language you write in.",
+      "agent_description": "Kala is a teammate for arts and culture nonprofit staff who wear ten hats and never have enough hours. Tell it what you need — arts grants to chase, a report due, a donor to thank — and it finds the answer or writes the first draft in seconds, in whatever language you write in.",
       "suggested_prompts": [
-        { "title": "Find grants", "message": "Find grants that fit our mission and budget" },
-        { "title": "Draft a report", "message": "Draft an impact report from a few notes about what we did" },
+        { "title": "Find arts funding", "message": "Find arts and culture grants that fit our mission and budget" },
+        { "title": "Draft a report", "message": "Draft an impact report from a few notes about our season" },
         { "title": "Thank a donor", "message": "Write a warm thank-you note for our donors" },
         { "title": "Track a deadline", "message": "Remind me about a grant deadline before it is due" }
       ]
@@ -20,7 +20,7 @@
       "messages_tab_read_only_enabled": false
     },
     "bot_user": {
-      "display_name": "benvu",
+      "display_name": "Kala",
       "always_online": true
     },
     "slash_commands": [
@@ -49,21 +49,21 @@
         "should_escape": false
       },
       {
-        "command": "/benvu",
-        "description": "Show Benvu help and commands",
+        "command": "/kala",
+        "description": "Show Kala help and commands",
         "should_escape": false
       },
       {
-        "command": "/benvu-feedback",
+        "command": "/kala-feedback",
         "description": "Admin: view a summary of feedback ratings",
         "should_escape": false
       }
     ],
     "shortcuts": [
       {
-        "name": "Send to Benvu",
+        "name": "Send to Kala",
         "type": "message",
-        "callback_id": "send_to_benvu",
+        "callback_id": "send_to_kala",
         "description": "Summarize, find grants, draft a report, or set a reminder from this message"
       }
     ]

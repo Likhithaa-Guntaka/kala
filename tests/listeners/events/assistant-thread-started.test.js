@@ -1,9 +1,8 @@
 import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
+import { ARTS_CULTURE } from '../../../listeners/arts-culture.js';
 import { handleAssistantThreadStarted } from '../../../listeners/events/assistant-thread-started.js';
-import { getOrgTypeById } from '../../../listeners/org-types.js';
-import { sessionStore } from '../../../thread-context/index.js';
 
 describe('handleAssistantThreadStarted', () => {
   let fakeClient;
@@ -20,7 +19,6 @@ describe('handleAssistantThreadStarted', () => {
       assistant: { threads: { setSuggestedPrompts: mock.fn(async () => ({ ok: true })) } },
     };
     fakeLogger = { error: mock.fn() };
-    sessionStore.clearOrgType('U123');
   });
 
   it('greets in the thread and pins prompts to the DM channel', async () => {
@@ -30,7 +28,7 @@ describe('handleAssistantThreadStarted', () => {
     const greet = fakeClient.chat.postMessage.mock.calls[0].arguments[0];
     assert.strictEqual(greet.channel, 'D123');
     assert.strictEqual(greet.thread_ts, '1700000000.000100');
-    assert.ok(/Benvu/.test(greet.text));
+    assert.ok(/Kala/.test(greet.text));
 
     assert.strictEqual(fakeClient.assistant.threads.setSuggestedPrompts.mock.callCount(), 1);
     const prompts = fakeClient.assistant.threads.setSuggestedPrompts.mock.calls[0].arguments[0];
@@ -39,19 +37,13 @@ describe('handleAssistantThreadStarted', () => {
     assert.ok(prompts.prompts.length > 0 && prompts.prompts.length <= 4);
   });
 
-  it("uses the user's org type to tailor the prompts when known", async () => {
-    sessionStore.setOrgType('U123', 'education');
-    try {
-      await handleAssistantThreadStarted({ event: startedEvent(), client: fakeClient, logger: fakeLogger });
-      const prompts = fakeClient.assistant.threads.setSuggestedPrompts.mock.calls[0].arguments[0].prompts;
-      const org = getOrgTypeById('education');
-      assert.deepStrictEqual(
-        prompts,
-        org.tailoredPrompts.slice(0, 4).map((message) => ({ title: message, message })),
-      );
-    } finally {
-      sessionStore.clearOrgType('U123');
-    }
+  it('pins the arts and culture tailored prompts', async () => {
+    await handleAssistantThreadStarted({ event: startedEvent(), client: fakeClient, logger: fakeLogger });
+    const prompts = fakeClient.assistant.threads.setSuggestedPrompts.mock.calls[0].arguments[0].prompts;
+    assert.deepStrictEqual(
+      prompts,
+      ARTS_CULTURE.tailoredPrompts.slice(0, 4).map((message) => ({ title: message, message })),
+    );
   });
 
   it('does nothing when the event has no channel', async () => {

@@ -6,7 +6,7 @@
  * @property {number} [id] - Assigned on record, so a later comment can be attached.
  * @property {string} user_id
  * @property {string} message_summary - Short summary of the user's message.
- * @property {string} response_summary - Short summary of Benvu's response.
+ * @property {string} response_summary - Short summary of Kala's response.
  * @property {'up' | 'down'} rating
  * @property {string} [comment] - Optional "What went wrong?" note, only on 👎.
  * @property {string} timestamp - ISO 8601.
@@ -93,10 +93,10 @@ export function summarizeFeedback() {
  */
 export function formatFeedbackSummary() {
   const { total, up, down, positivePct, recent } = summarizeFeedback();
-  if (total === 0) return '*Benvu feedback*\nNo feedback yet.';
+  if (total === 0) return '*Kala feedback*\nNo feedback yet.';
 
   const lines = [
-    '*Benvu feedback summary*',
+    '*Kala feedback summary*',
     `Helpful: ${up}   Not helpful: ${down}   ${total} total (${positivePct}% positive)`,
   ];
   if (timingLog.length > 0) {

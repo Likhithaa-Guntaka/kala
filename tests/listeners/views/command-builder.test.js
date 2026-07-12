@@ -13,7 +13,7 @@ describe('buildHelpBlocks', () => {
       .filter((b) => b.type === 'section')
       .map((b) => b.text.text)
       .join('\n');
-    for (const cmd of ['/grant', '/report', '/deadline', '/announce', '/benvu']) {
+    for (const cmd of ['/grant', '/report', '/deadline', '/announce', '/kala']) {
       assert.ok(text.includes(cmd), `mentions ${cmd}`);
     }
     assertNoEmoji(blocks);

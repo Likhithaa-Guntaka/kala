@@ -18,6 +18,6 @@ registerListeners(app);
 
 (async () => {
   await app.start();
-  app.logger.info(`Benvu is running! (Claude auth: ${AUTH_MODE})`);
+  app.logger.info(`Kala is running! (Claude auth: ${AUTH_MODE})`);
   startDeadlineScheduler(app.client, app.logger);
 })();

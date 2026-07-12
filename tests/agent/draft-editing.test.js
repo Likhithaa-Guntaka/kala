@@ -50,7 +50,7 @@ describe('last-draft tracking (full cycle: draft -> store -> retrieve for edit)'
     const channelId = 'C1';
     const threadTs = '100.1';
 
-    // Turn 1: the donor tool runs; runBenvuAgent would capture the draft like this.
+    // Turn 1: the donor tool runs; runKalaAgent would capture the draft like this.
     let captured = null;
     await createDraftDonorThankYouTool((d) => {
       captured = d;

@@ -2,7 +2,6 @@ import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleIssueSubmission } from '../../../listeners/views/issue-modal.js';
-import { sessionStore } from '../../../thread-context/index.js';
 
 describe('handleIssueSubmission', () => {
   let fakeAck;
@@ -102,25 +101,20 @@ describe('handleIssueSubmission', () => {
   });
 
   it('republishes the Home tab with a confirmation banner naming the category', async () => {
-    sessionStore.setOrgType('U123', 'education'); // onboarded — the banner renders
-    try {
-      await handleIssueSubmission({
-        ack: fakeAck,
-        body: fakeBody,
-        client: fakeClient,
-        context: fakeContext,
-        logger: fakeLogger,
-      });
-      assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
-      const publish = fakeClient.views.publish.mock.calls[0].arguments[0];
-      assert.strictEqual(publish.user_id, 'U123');
-      assert.strictEqual(publish.view.type, 'home');
-      const banner = publish.view.blocks.find((b) => b.type === 'section' && /messages tab/i.test(b.text?.text || ''));
-      assert.ok(banner, 'a confirmation banner is present');
-      assert.ok(banner.text.text.includes('Find Grants'), 'banner names the category');
-    } finally {
-      sessionStore.clearOrgType('U123');
-    }
+    await handleIssueSubmission({
+      ack: fakeAck,
+      body: fakeBody,
+      client: fakeClient,
+      context: fakeContext,
+      logger: fakeLogger,
+    });
+    assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
+    const publish = fakeClient.views.publish.mock.calls[0].arguments[0];
+    assert.strictEqual(publish.user_id, 'U123');
+    assert.strictEqual(publish.view.type, 'home');
+    const banner = publish.view.blocks.find((b) => b.type === 'section' && /messages tab/i.test(b.text?.text || ''));
+    assert.ok(banner, 'a confirmation banner is present');
+    assert.ok(banner.text.text.includes('Find Grants'), 'banner names the category');
   });
 
   it('still completes the submission if the Home banner republish fails', async () => {

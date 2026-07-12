@@ -2,7 +2,6 @@ import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleAppHomeOpened } from '../../../listeners/events/app-home-opened.js';
-import { sessionStore } from '../../../thread-context/index.js';
 
 describe('handleAppHomeOpened', () => {
   let fakeClient;
@@ -55,8 +54,6 @@ describe('handleAppHomeOpened', () => {
     // users.info never resolves — the 2s timeout in fetchFirstName must fire so
     // the Home tab renders with a neutral greeting instead of blocking forever.
     fakeClient.users.info = mock.fn(() => new Promise(() => {}));
-    // Onboarded state so the greeting path (not the first-open picker) renders.
-    sessionStore.setOrgType('U123', 'education');
     mock.timers.enable({ apis: ['setTimeout'] });
     try {
       const event = { tab: 'home', channel: 'D123' };
@@ -72,13 +69,15 @@ describe('handleAppHomeOpened', () => {
 
       assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
       assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
-      // Greeting fell back to the neutral form (no ", Name!").
+      // Greeting fell back to the neutral form (no ", Name!"). It's a bold section
+      // now, below the stable "Kala" header.
       const view = fakeClient.views.publish.mock.calls[0].arguments[0].view;
-      const header = view.blocks.find((b) => b.type === 'header');
-      assert.match(header.text.text, /^Good (morning|afternoon|evening)!$/);
+      const greeting = view.blocks.find(
+        (b) => b.type === 'section' && /^\*Good (morning|afternoon|evening)!\*$/.test(b.text?.text || ''),
+      );
+      assert.ok(greeting, 'neutral greeting section present');
     } finally {
       mock.timers.reset();
-      sessionStore.clearOrgType('U123');
     }
   });
 

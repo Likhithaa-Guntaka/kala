@@ -1,41 +1,33 @@
-import { sessionStore } from '../../thread-context/index.js';
-import { getOrgTypeById } from '../org-types.js';
+import { ARTS_CULTURE } from '../arts-culture.js';
 import { buildAppHomeView } from './app-home-builder.js';
 import { countClosingSoon } from './closing-soon.js';
 import { fetchFirstName } from './user-name.js';
 
 /**
- * Best-effort "closing soon" line for an org type, or null. Never throws and
- * self-times-out inside countClosingSoon, so it can't delay or break the render.
- * @param {import('../org-types.js').OrgType | undefined} org
+ * Best-effort live "grants closing soon" count for arts and culture funding, or
+ * null. Never throws and self-times-out inside countClosingSoon, so it can't delay
+ * or break the render.
  * @returns {Promise<{ count: number, label: string } | null>}
  */
-async function closingSoonFor(org) {
-  if (!org?.defaultGrantCategories || !org?.grantLabel) return null;
-  const count = await countClosingSoon(org.defaultGrantCategories);
-  return typeof count === 'number' && count > 0 ? { count, label: org.grantLabel } : null;
+async function closingSoonForArts() {
+  const count = await countClosingSoon(ARTS_CULTURE.defaultGrantCategories);
+  return typeof count === 'number' && count > 0 ? { count, label: ARTS_CULTURE.grantLabel } : null;
 }
 
 /**
  * Per-user generation token. Every publishHome call takes the next token for its
  * user; after awaiting the (possibly slow) name fetch, it publishes only if no
- * newer call has started. Without this, a slow older refresh — e.g. the Home
- * refresh that runs after posting the onboarding DM — could finish last and
+ * newer call has started. Without this, a slow older refresh could finish last and
  * overwrite the tab with a stale snapshot taken before a newer refresh ran.
  * @type {Map<string, number>}
  */
 const publishGen = new Map();
 
 /**
- * Publish the App Home view for a user, guarded against stale overwrites.
- *
- * Two properties make concurrent refreshes safe:
- *  1. The org type is read AFTER the async name fetch, so a publish never carries
- *     a pre-await snapshot of the org type.
- *  2. A per-user generation guard means only the most recently started call for a
- *     user actually publishes; superseded in-flight calls bail out. So overlapping
- *     refreshes (change-org then re-pick, a Home re-open, a banner update) can't
- *     land out of order and show a stale org.
+ * Publish the App Home view for a user, guarded against stale overwrites: a
+ * per-user generation guard means only the most recently started call for a user
+ * actually publishes; superseded in-flight calls bail out. So overlapping refreshes
+ * (a Home re-open, a banner update) can't land out of order.
  *
  * @param {import('@slack/web-api').WebClient} client
  * @param {Object} opts
@@ -53,16 +45,13 @@ export async function publishHome(client, { userId, botUserId = null, notice }) 
   // A newer publish for this user started while we awaited — let it win.
   if (publishGen.get(userId) !== gen) return false;
 
-  // Read the org type fresh, AFTER the await, so we never publish a stale snapshot.
-  const orgType = sessionStore.getOrgType(userId);
-
-  // Best-effort live "closing soon" count for this org. Self-times-out and never
-  // throws, so a slow or down Grants.gov omits the line instead of blocking Home.
-  const closingSoon = await closingSoonFor(getOrgTypeById(orgType));
+  // Best-effort live "closing soon" count. Self-times-out and never throws, so a
+  // slow or down Grants.gov omits the line instead of blocking Home.
+  const closingSoon = await closingSoonForArts();
   // A newer publish may have started during the (bounded) count fetch — let it win.
   if (publishGen.get(userId) !== gen) return false;
 
-  const view = buildAppHomeView(botUserId, orgType, { firstName, notice, closingSoon });
+  const view = buildAppHomeView(botUserId, { firstName, notice, closingSoon });
   await client.views.publish({ user_id: userId, view });
   return true;
 }

@@ -1,1 +1,1 @@
-export { AUTH_MODE, runBenvuAgent } from './benvu.js';
+export { AUTH_MODE, runKalaAgent } from './kala.js';

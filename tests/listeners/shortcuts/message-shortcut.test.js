@@ -1,9 +1,9 @@
 import assert from 'node:assert';
 import { beforeEach, describe, it, mock } from 'node:test';
 
-import { handleSendToBenvuShortcut, handleSendToBenvuSubmit } from '../../../listeners/shortcuts/message-shortcut.js';
+import { handleSendToKalaShortcut, handleSendToKalaSubmit } from '../../../listeners/shortcuts/message-shortcut.js';
 
-describe('Send to Benvu shortcut', () => {
+describe('Send to Kala shortcut', () => {
   let ack;
   let logger;
 
@@ -12,16 +12,16 @@ describe('Send to Benvu shortcut', () => {
     logger = { error: mock.fn() };
   });
 
-  describe('handleSendToBenvuShortcut', () => {
+  describe('handleSendToKalaShortcut', () => {
     it('opens a modal pre-filled with the message and four choices', async () => {
       const client = { views: { open: mock.fn(async () => ({ ok: true })) } };
       const shortcut = { trigger_id: 'T1', message: { text: 'These are our meeting notes.' } };
-      await handleSendToBenvuShortcut({ ack, shortcut, client, logger });
+      await handleSendToKalaShortcut({ ack, shortcut, client, logger });
 
       assert.strictEqual(ack.mock.callCount(), 1);
       assert.strictEqual(client.views.open.mock.callCount(), 1);
       const view = client.views.open.mock.calls[0].arguments[0].view;
-      assert.strictEqual(view.callback_id, 'send_to_benvu_submit');
+      assert.strictEqual(view.callback_id, 'send_to_kala_submit');
       assert.ok(view.private_metadata.includes('meeting notes'));
 
       const input = view.blocks.find((b) => b.type === 'input');
@@ -33,7 +33,7 @@ describe('Send to Benvu shortcut', () => {
     });
   });
 
-  describe('handleSendToBenvuSubmit', () => {
+  describe('handleSendToKalaSubmit', () => {
     it('DMs a note (and does not run the agent) when the message had no text', async () => {
       const client = {
         conversations: { open: mock.fn(async () => ({ channel: { id: 'D1' } })) },
@@ -50,7 +50,7 @@ describe('Send to Benvu shortcut', () => {
         context: {},
         logger,
       };
-      await handleSendToBenvuSubmit(args);
+      await handleSendToKalaSubmit(args);
 
       assert.strictEqual(ack.mock.callCount(), 1);
       assert.strictEqual(client.chat.postMessage.mock.callCount(), 1);

@@ -24,10 +24,10 @@ describe('kit primitives', () => {
   });
 
   it('header is a header block capped at the header limit', () => {
-    const h = header('Benvu');
+    const h = header('Kala');
     assert.strictEqual(h.type, 'header');
     assert.strictEqual(h.text.type, 'plain_text');
-    assert.strictEqual(h.text.text, 'Benvu');
+    assert.strictEqual(h.text.text, 'Kala');
     assert.ok(header('y'.repeat(300)).text.text.length <= LIMITS.headerText);
   });
 

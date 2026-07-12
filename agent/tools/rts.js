@@ -3,7 +3,7 @@
  *
  * Wraps `assistant.search.context` — Slack's real-time search over the messages
  * and files a user can see across their workspace. Called with the user's token
- * (xoxp-), no `action_token` is needed. Benvu already collects `deps.userToken`
+ * (xoxp-), no `action_token` is needed. Kala already collects `deps.userToken`
  * for the Slack MCP Server, and manifest.json requests the `search:read.*` user
  * scopes this endpoint needs.
  *
@@ -127,10 +127,10 @@ function snippet(text, max = 240) {
 export function formatWorkspaceResults(query, result) {
   if (!result.ok) {
     if (result.error === 'no_user_token') {
-      return "I can't search your workspace yet — Benvu needs to be connected to Slack search first. For now, tell me what you know and I'll work from that.";
+      return "I can't search your workspace yet — Kala needs to be connected to Slack search first. For now, tell me what you know and I'll work from that.";
     }
     if (result.error === 'missing_scope' || result.error === 'not_allowed_token_type') {
-      return "I couldn't search the workspace — the Slack connection is missing the search permission. An admin may need to reconnect Benvu with search access.";
+      return "I couldn't search the workspace — the Slack connection is missing the search permission. An admin may need to reconnect Kala with search access.";
     }
     return `I couldn't search the workspace just now (${result.error}). Please try again in a moment.`;
   }

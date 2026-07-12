@@ -1,20 +1,8 @@
-import { ORG_TYPES } from '../org-types.js';
+import { ARTS_CULTURE } from '../arts-culture.js';
 import { actions, button, context, header, section } from './kit.js';
 
 /** Action ID prefix for the "run this example prompt" buttons. */
 export const PROMPT_ACTION_PREFIX = 'prompt_run_';
-
-/**
- * An actions block with one plain button per org type. Emoji-free labels; the
- * org id rides in the button value.
- * @returns {import('@slack/types').ActionsBlock}
- */
-export function buildOrgTypeActionsBlock() {
-  return actions(
-    'org_type_select',
-    ORG_TYPES.map((t) => button({ text: t.label, actionId: `orgtype_${t.id}`, value: t.id })),
-  );
-}
 
 /**
  * An actions block of prompt buttons. The full prompt rides in the value (so the
@@ -36,41 +24,22 @@ export function buildPromptButtons(prompts, blockId, startIndex = 0) {
 }
 
 /**
- * An actions block with this org type's tailored example prompts as buttons.
- * @param {import('../org-types.js').OrgType} orgType
- * @returns {import('@slack/types').ActionsBlock}
- */
-export function buildPromptActionsBlock(orgType) {
-  return buildPromptButtons(orgType.tailoredPrompts, 'tailored_prompts');
-}
-
-/**
- * Blocks for the welcome DM: a warm header, a one-line intro with the org-type
- * question, the picker buttons, and a line on what happens next.
+ * Blocks for the welcome DM: a warm header, a one-line intro that names Kala's
+ * arts and culture focus, and the tailored example prompts as buttons so the user
+ * can get started immediately — no selection step.
  * @returns {import('@slack/types').KnownBlock[]}
  */
 export function buildWelcomeDmBlocks() {
   return [
-    header('Welcome to Benvu'),
+    header('Welcome to Kala'),
     section(
-      "I'm Benvu, your AI teammate for nonprofits. I find real grants, draft your reports, and track every deadline.\n\n" +
-        "What kind of work do you do? I'll tailor everything to it.",
+      "I'm Kala, your AI teammate for arts and culture nonprofits. I find real arts and culture grants, draft " +
+        'your reports, and track every deadline — in any language.\n\nHere are a few things I can do:',
     ),
-    buildOrgTypeActionsBlock(),
-    context('Pick one to get started.'),
-  ];
-}
-
-/**
- * Blocks for the follow-up DM sent after a user picks their org type: a short
- * confirmation, three tailored example prompts, and a nudge on what to do next.
- * @param {import('../org-types.js').OrgType} orgType
- * @returns {import('@slack/types').KnownBlock[]}
- */
-export function buildTailoredPromptsDmBlocks(orgType) {
-  return [
-    section(`Set up for *${orgType.label}*. Here are a few things I can do:`),
-    buildPromptActionsBlock(orgType),
+    buildPromptButtons(ARTS_CULTURE.tailoredPrompts, 'tailored_prompts'),
+    section('*Operational trackers*'),
+    // Offset the action_ids past the tailored ones so both rows coexist in one message.
+    buildPromptButtons(ARTS_CULTURE.featurePrompts, 'feature_prompts', ARTS_CULTURE.tailoredPrompts.length),
     context('Tap one, or just type what you need.'),
   ];
 }

@@ -2,7 +2,7 @@ import { buildWelcomeDmBlocks } from '../views/onboarding-builder.js';
 
 // Fallback text (shown in notifications and by clients that can't render blocks).
 const WELCOME_FALLBACK =
-  "Hi, I'm Benvu. I find grants, draft reports, and track deadlines, in any language. What kind of organization are you?";
+  "Hi, I'm Kala, your AI teammate for arts and culture nonprofits. I find grants, draft reports, and track deadlines, in any language.";
 
 // Idempotency guard: Socket Mode can deliver the same event over more than one
 // connection (and Slack may retry), which otherwise sends the welcome twice.
@@ -12,7 +12,7 @@ const welcomed = new Set();
 
 /**
  * Handle team_join events — fired when a new member joins the workspace.
- * Opens a DM with the new member and starts onboarding with native org-type buttons.
+ * Opens a DM with the new member and welcomes them with tailored arts and culture prompts.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'team_join'>} args
  * @returns {Promise<void>}
  */

@@ -1,21 +1,21 @@
-# Benvu: Nonprofit Assistant Agent (Bolt for JavaScript and Claude Agent SDK)
+# Kala: Nonprofit Assistant Agent (Bolt for JavaScript and Claude Agent SDK)
 
-Meet Benvu — an AI-powered assistant for nonprofit teams that lives in Slack. Benvu helps staff find grants, draft impact reports, and track deadlines, and it replies in whatever language you write in, all without leaving the conversation.
+Meet Kala — an AI-powered assistant for nonprofit teams that lives in Slack. Kala helps staff find grants, draft impact reports, and track deadlines, and it replies in whatever language you write in, all without leaving the conversation.
 
 Built with [Bolt for JavaScript](https://tools.slack.dev/bolt-js/) and the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview) using models from [Anthropic](https://www.anthropic.com).
 
 ## App Overview
 
-Benvu gives your team instant help through four entry points:
+Kala gives your team instant help through four entry points:
 
-* **App Home** — Users open Benvu's Home tab and choose from three quick actions (Find Grants, Draft a Report, Track a Deadline), or just describe what they need. Benvu starts a DM thread and responds.
-* **Direct Messages** — Users message Benvu directly to describe what they need. Benvu responds in-thread, maintaining context across follow-ups.
-* **Channel @mentions** — Users mention `@Benvu` in any channel to get help without leaving the conversation.
-* **Assistant Panel** — Users click _Add Agent_ in Slack, select Benvu, and pick from suggested prompts or describe a need.
+* **App Home** — Users open Kala's Home tab and choose from three quick actions (Find Grants, Draft a Report, Track a Deadline), or just describe what they need. Kala starts a DM thread and responds.
+* **Direct Messages** — Users message Kala directly to describe what they need. Kala responds in-thread, maintaining context across follow-ups.
+* **Channel @mentions** — Users mention `@Kala` in any channel to get help without leaving the conversation.
+* **Assistant Panel** — Users click _Add Agent_ in Slack, select Kala, and pick from suggested prompts or describe a need.
 
-Benvu detects the language each user writes in and replies in that same language.
+Kala detects the language each user writes in and replies in that same language.
 
-Benvu's tools:
+Kala's tools:
 
 * **Find Grants** — Searches the live [Grants.gov](https://www.grants.gov) federal database (real, public API) and returns matches with name, deadline, award amount, and eligibility.
 * **Draft a Report / Donor Thank-You / Volunteer Announcement** — Turns a one-line prompt into a ready-to-use draft.
@@ -25,11 +25,11 @@ Benvu's tools:
 
 ### Real-Time Search (RTS) API
 
-Benvu uses Slack's [Real-Time Search API](https://docs.slack.dev/apis/web-api/real-time-search-api/) (`assistant.search.context`) so it can pull real context from your workspace on demand — past grant discussions, donor updates, or who owns a deadline — without anything being stored outside Slack. It runs on the user's token (the same connection used for the MCP Server) and the `search:read.*` scopes in [manifest.json](./manifest.json).
+Kala uses Slack's [Real-Time Search API](https://docs.slack.dev/apis/web-api/real-time-search-api/) (`assistant.search.context`) so it can pull real context from your workspace on demand — past grant discussions, donor updates, or who owns a deadline — without anything being stored outside Slack. It runs on the user's token (the same connection used for the MCP Server) and the `search:read.*` scopes in [manifest.json](./manifest.json).
 
 ### Slack MCP Server
 
-Benvu also works with the [Slack MCP Server](https://docs.slack.dev/ai/slack-mcp-server), giving it the ability to search messages and files, read channel history and threads, send messages, schedule messages, and create or update Slack canvases. When deployed with OAuth (HTTP mode), Benvu automatically connects to the Slack MCP Server using the user's token, unlocking these capabilities on top of the built-in tools.
+Kala also works with the [Slack MCP Server](https://docs.slack.dev/ai/slack-mcp-server), giving it the ability to search messages and files, read channel history and threads, send messages, schedule messages, and create or update Slack canvases. When deployed with OAuth (HTTP mode), Kala automatically connects to the Slack MCP Server using the user's token, unlocking these capabilities on top of the built-in tools.
 
 ## Setup
 
@@ -57,8 +57,8 @@ slack login
 #### Initializing the project
 
 ```sh
-slack create my-benvu-agent --template slack-samples/bolt-js-support-agent --subdir claude-agent-sdk
-cd my-benvu-agent
+slack create my-kala-agent --template slack-samples/bolt-js-support-agent --subdir claude-agent-sdk
+cd my-kala-agent
 ```
 
 </details>
@@ -93,8 +93,8 @@ SLACK_APP_TOKEN=YOUR_SLACK_APP_TOKEN
 #### Initializing the project
 
 ```sh
-git clone https://github.com/slack-samples/bolt-js-support-agent.git my-benvu-agent
-cd my-benvu-agent/claude-agent-sdk
+git clone https://github.com/slack-samples/bolt-js-support-agent.git my-kala-agent
+cd my-kala-agent/claude-agent-sdk
 ```
 
 </details>
@@ -109,9 +109,9 @@ npm install
 
 ### Anthropic Setup
 
-Benvu runs on Claude through the Claude Agent SDK. The SDK resolves credentials automatically, so you have two options:
+Kala runs on Claude through the Claude Agent SDK. The SDK resolves credentials automatically, so you have two options:
 
-**Option A — Claude Code session (no API key).** If you're signed in to [Claude Code](https://claude.com/claude-code) (a subscription or OAuth session), Benvu authenticates through that session and needs **no `ANTHROPIC_API_KEY`**. This is the default in the sandbox — leave the key unset in `.env` and you're done. On startup the app logs `Claude auth: claude-code-session` to confirm.
+**Option A — Claude Code session (no API key).** If you're signed in to [Claude Code](https://claude.com/claude-code) (a subscription or OAuth session), Kala authenticates through that session and needs **no `ANTHROPIC_API_KEY`**. This is the default in the sandbox — leave the key unset in `.env` and you're done. On startup the app logs `Claude auth: claude-code-session` to confirm.
 
 **Option B — External API key.** To use the external Claude API instead:
 
@@ -240,17 +240,17 @@ node app-oauth.js
 
 ### Using the App
 
-Once Benvu is running, there are several ways to interact:
+Once Kala is running, there are several ways to interact:
 
-**App Home** — Open Benvu in Slack and click the _Home_ tab. You'll see three quick-action buttons (_Find Grants_, _Draft a Report_, _Track a Deadline_). Click one to get started, or just describe what you need. Benvu will start a DM thread with you.
+**App Home** — Open Kala in Slack and click the _Home_ tab. You'll see three quick-action buttons (_Find Grants_, _Draft a Report_, _Track a Deadline_). Click one to get started, or just describe what you need. Kala will start a DM thread with you.
 
-**Direct Messages** — Open a DM with Benvu. You'll see suggested prompts like _Find Grants_, _Draft a Report_, and _Track a Deadline_ — pick one or describe your own need in any language. Benvu will react with :eyes: while processing, then reply in a thread. Send follow-up messages in the same thread and Benvu will maintain the full conversation context.
+**Direct Messages** — Open a DM with Kala. You'll see suggested prompts like _Find Grants_, _Draft a Report_, and _Track a Deadline_ — pick one or describe your own need in any language. Kala will react with :eyes: while processing, then reply in a thread. Send follow-up messages in the same thread and Kala will maintain the full conversation context.
 
-**Channel @mentions** — Invite Benvu to a channel by typing `/invite @Benvu` in the message box, then type `@Benvu` followed by what you need. Benvu responds in a thread so the channel stays clean.
+**Channel @mentions** — Invite Kala to a channel by typing `/invite @Kala` in the message box, then type `@Kala` followed by what you need. Kala responds in a thread so the channel stays clean.
 
-**Assistant Panel** — Click _Add Agent_ in the top-right corner of Slack, select Benvu from the list, then pick a suggested prompt or type a message.
+**Assistant Panel** — Click _Add Agent_ in the top-right corner of Slack, select Kala from the list, then pick a suggested prompt or type a message.
 
-Benvu will add a :white_check_mark: reaction when it believes a request has been handled, and occasionally adds a contextual emoji reaction to keep things friendly.
+Kala will add a :white_check_mark: reaction when it believes a request has been handled, and occasionally adds a contextual emoji reaction to keep things friendly.
 
 ### Linting
 
@@ -290,13 +290,13 @@ Every incoming request is routed to a "listener". This directory groups each lis
 **`/listeners/events`** — Handles incoming events:
 
 * `app-home-opened.js` — Publishes the App Home view with category buttons, or pins suggested prompts to the agent DM Messages tab (branches on `event.tab`).
-* `app-mentioned.js` — Responds to `@Benvu` mentions in channels.
+* `app-mentioned.js` — Responds to `@Kala` mentions in channels.
 * `message.js` — Responds to direct messages from users.
 
 **`/listeners/actions`** — Handles interactive components:
 
 * `issue-buttons.js` — Opens the issue submission modal when a category button is clicked.
-* `feedback-buttons.js` — Handles thumbs up/down feedback on Benvu's responses.
+* `feedback-buttons.js` — Handles thumbs up/down feedback on Kala's responses.
 
 **`/listeners/views`** — Handles view submissions and builds Block Kit views:
 
@@ -307,9 +307,9 @@ Every incoming request is routed to a "listener". This directory groups each lis
 
 ### `/agent`
 
-The `benvu.js` file configures the Claude Agent SDK agent with a system prompt, tools registered via an in-process MCP server, and a `runBenvuAgent()` function that handles sending queries and collecting responses.
+The `kala.js` file configures the Claude Agent SDK agent with a system prompt, tools registered via an in-process MCP server, and a `runKalaAgent()` function that handles sending queries and collecting responses.
 
-Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runBenvuAgent()` that capture the dependencies. Static tools (grant finder, report drafter, deadline reminder) remain as module-level exports in `agent/tools/`.
+Tools that need Slack API access (emoji reactions, mark resolved) are created as closures inside `runKalaAgent()` that capture the dependencies. Static tools (grant finder, report drafter, deadline reminder) remain as module-level exports in `agent/tools/`.
 
 The `tools` directory contains three nonprofit assistant tools defined using `tool()` from the Claude Agent SDK with Zod v4 schemas.
 

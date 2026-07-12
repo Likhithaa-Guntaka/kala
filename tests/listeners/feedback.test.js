@@ -24,7 +24,7 @@ describe('feedback store', () => {
 
   it('formats an empty summary before any feedback... or a populated one after', () => {
     const text = formatFeedbackSummary();
-    assert.ok(text.includes('Benvu feedback'));
+    assert.ok(text.includes('Kala feedback'));
   });
 });
 
@@ -202,7 +202,7 @@ describe('handleFeedbackDownSubmit', () => {
   });
 });
 
-describe('/benvu-feedback', () => {
+describe('/kala-feedback', () => {
   it('acks and responds ephemerally with the summary', async () => {
     const ack = mock.fn(async () => {});
     const respond = mock.fn(async () => {});
@@ -210,6 +210,6 @@ describe('/benvu-feedback', () => {
     assert.strictEqual(ack.mock.callCount(), 1);
     const arg = respond.mock.calls[0].arguments[0];
     assert.strictEqual(arg.response_type, 'ephemeral');
-    assert.ok(arg.text.includes('Benvu feedback'));
+    assert.ok(arg.text.includes('Kala feedback'));
   });
 });

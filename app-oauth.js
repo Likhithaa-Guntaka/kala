@@ -62,7 +62,7 @@ registerListeners(app);
 (async () => {
   const port = Number.parseInt(process.env.PORT || '3000', 10);
   await app.start(port);
-  app.logger.info(`Benvu is running on port ${port}! (Claude auth: ${AUTH_MODE})`);
+  app.logger.info(`Kala is running on port ${port}! (Claude auth: ${AUTH_MODE})`);
   startDeadlineScheduler(app.client, app.logger);
   if (process.env.SLACK_REDIRECT_URI) {
     const origin = new URL(process.env.SLACK_REDIRECT_URI).origin;

@@ -1,10 +1,5 @@
+import { suggestedPrompts } from '../suggested-prompts.js';
 import { publishHome } from '../views/publish-home.js';
-
-const SUGGESTED_PROMPTS = [
-  { title: 'Find Grants', message: 'Find grants for youth education in New York under $50k' },
-  { title: 'Draft a Report', message: 'Draft an impact report, we served 300 families this quarter' },
-  { title: 'Track a Deadline', message: 'Remind me about the Ford Foundation grant deadline on August 15' },
-];
 
 /**
  * Handle app_home_opened events. Under agent_view, this event fires for both
@@ -17,13 +12,14 @@ const SUGGESTED_PROMPTS = [
 export async function handleAppHomeOpened({ client, event, context, logger }) {
   try {
     if (event.tab === 'messages') {
+      const { title, prompts } = suggestedPrompts();
       await client.assistant.threads.setSuggestedPrompts(
         // Under agent_view, suggested prompts pin to the top of the Messages tab —
         // no thread_ts is required. Cast until @slack/bolt's types catch up.
         /** @type {import('@slack/web-api').AssistantThreadsSetSuggestedPromptsArguments} */ ({
           channel_id: event.channel,
-          title: 'How can I help you today?',
-          prompts: SUGGESTED_PROMPTS,
+          title,
+          prompts,
         }),
       );
       // TODO(agent-dm-messages-tab): handle app_context_changed once Bolt supports it

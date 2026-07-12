@@ -3,7 +3,7 @@ import { beforeEach, describe, it, mock } from 'node:test';
 
 import { handleAnnounceCommand } from '../../../listeners/commands/announce.js';
 import { handleGrantCommand } from '../../../listeners/commands/grant.js';
-import { HELP_TEXT, handleBenvuCommand } from '../../../listeners/commands/help.js';
+import { HELP_TEXT, handleKalaCommand } from '../../../listeners/commands/help.js';
 import { handleRemindCommand } from '../../../listeners/commands/remind.js';
 import { handleReportCommand } from '../../../listeners/commands/report.js';
 
@@ -36,13 +36,13 @@ describe('slash commands', () => {
     }
   });
 
-  describe('/benvu help', () => {
+  describe('/kala help', () => {
     it('acks and returns help listing every command', async () => {
-      await handleBenvuCommand({ ack, respond });
+      await handleKalaCommand({ ack, respond });
       assert.strictEqual(ack.mock.callCount(), 1);
       const arg = respond.mock.calls[0].arguments[0];
       assert.strictEqual(arg.response_type, 'ephemeral');
-      for (const cmd of ['/grant', '/report', '/deadline', '/announce', '/benvu']) {
+      for (const cmd of ['/grant', '/report', '/deadline', '/announce', '/kala']) {
         assert.ok(arg.text.includes(cmd), `help mentions ${cmd}`);
       }
     });

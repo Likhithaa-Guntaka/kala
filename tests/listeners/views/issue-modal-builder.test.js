@@ -10,7 +10,7 @@ describe('buildIssueModal', () => {
     const modal = buildIssueModal();
     assert.strictEqual(modal.type, 'modal');
     assert.strictEqual(modal.callback_id, 'issue_submission');
-    assert.ok(/how can benvu help/i.test(modal.title.text));
+    assert.ok(/how can kala help/i.test(modal.title.text));
     assert.ok(modal.close);
   });
 

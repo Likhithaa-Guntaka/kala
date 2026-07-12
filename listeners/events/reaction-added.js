@@ -1,11 +1,11 @@
-import { runBenvuAgent } from '../../agent/index.js';
-import { sessionStore } from '../../thread-context/index.js';
-import { getOrgTypeById } from '../org-types.js';
+import { runKalaAgent } from '../../agent/index.js';
+import { acknowledge, findByMessage } from '../../agent/tools/schedule-store.js';
 import { buildAgentReply } from '../views/feedback-builder.js';
 import { grantCardsFor } from '../views/grant-results-builder.js';
+import { buildScheduleAckBlocks, buildScheduleAckText } from '../views/schedule-ack-builder.js';
 
 /**
- * Reactions Benvu acts on. Each maps an emoji name to either an agent prompt
+ * Reactions Kala acts on. Each maps an emoji name to either an agent prompt
  * (built from the reacted message) or a fixed reply.
  * @type {Record<string, { kind: 'agent', prompt: (text: string) => string } | { kind: 'reply', text: string }>}
  */
@@ -22,22 +22,49 @@ const handled = new Set();
 
 /**
  * Handle reaction_added events. When a human reacts to a message with one of the
- * trigger emojis, Benvu reads the message and replies in a thread on it.
+ * trigger emojis, Kala reads the message and replies in a thread on it.
  * @param {import('@slack/bolt').AllMiddlewareArgs & import('@slack/bolt').SlackEventMiddlewareArgs<'reaction_added'>} args
  * @returns {Promise<void>}
  */
 export async function handleReactionAdded({ event, client, context, logger }) {
-  // Only messages, and only the emojis we act on.
+  // Only messages.
   if (event.item?.type !== 'message') return;
-  const action = REACTION_ACTIONS[event.reaction];
-  if (!action) return;
 
   const reactor = event.user;
-  // Ignore Benvu's own reactions outright.
+  // Ignore Kala's own reactions outright.
   if (!reactor || reactor === context.botUserId) return;
 
   const channelId = event.item.channel;
   const messageTs = event.item.ts;
+
+  // Schedule-change acknowledgment: ANY reaction on a tracked change card counts
+  // as "I saw it", so this is handled before the trigger-emoji routing below.
+  const change = findByMessage(channelId, messageTs);
+  if (change) {
+    const ackKey = `sched:${channelId}:${messageTs}:${event.reaction}:${reactor}`;
+    if (handled.has(ackKey)) return;
+    handled.add(ackKey);
+    try {
+      const res = acknowledge(change.id, { userId: reactor });
+      // Refresh the posted card so the tally and still-waiting list stay live.
+      if (res?.newlyAcked && change.messageRef) {
+        await client.chat.update({
+          channel: change.messageRef.channel,
+          ts: change.messageRef.ts,
+          text: buildScheduleAckText(res.record),
+          blocks: buildScheduleAckBlocks(res.record),
+        });
+      }
+    } catch (e) {
+      logger.error(`Failed to record schedule acknowledgment via reaction: ${e}`);
+    }
+    return;
+  }
+
+  // Otherwise, only the emojis we act on for agent triggers.
+  const action = REACTION_ACTIONS[event.reaction];
+  if (!action) return;
+
   const dedupeKey = `${channelId}:${messageTs}:${event.reaction}:${reactor}`;
   if (handled.has(dedupeKey)) return;
   handled.add(dedupeKey);
@@ -71,8 +98,6 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       return;
     }
 
-    const orgTypeId = sessionStore.getOrgType(reactor);
-    const orgType = getOrgTypeById(orgTypeId)?.label;
     const deps = {
       client,
       userId: reactor,
@@ -80,10 +105,8 @@ export async function handleReactionAdded({ event, client, context, logger }) {
       threadTs: messageTs,
       messageTs,
       userToken: context.userToken,
-      orgType,
-      orgTypeId,
     };
-    const { responseText, grants } = await runBenvuAgent(action.prompt(messageContent), undefined, deps);
+    const { responseText, grants } = await runKalaAgent(action.prompt(messageContent), undefined, deps);
 
     await client.chat.postMessage({
       channel: channelId,

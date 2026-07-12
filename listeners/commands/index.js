@@ -1,7 +1,7 @@
 import { handleAnnounceCommand } from './announce.js';
 import { handleFeedbackAdminCommand } from './feedback.js';
 import { handleGrantCommand } from './grant.js';
-import { handleBenvuCommand } from './help.js';
+import { handleKalaCommand } from './help.js';
 import { handleRemindCommand } from './remind.js';
 import { handleReportCommand } from './report.js';
 
@@ -16,6 +16,6 @@ export function register(app) {
   // NOTE: /remind is a reserved Slack built-in command, so we use /deadline.
   app.command('/deadline', handleRemindCommand);
   app.command('/announce', handleAnnounceCommand);
-  app.command('/benvu', handleBenvuCommand);
-  app.command('/benvu-feedback', handleFeedbackAdminCommand);
+  app.command('/kala', handleKalaCommand);
+  app.command('/kala-feedback', handleFeedbackAdminCommand);
 }

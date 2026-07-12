@@ -42,7 +42,7 @@ async function parentSummary(client, channelId, threadTs, messageTs) {
 }
 
 /**
- * Post the single acknowledgement Benvu gives for feedback.
+ * Post the single acknowledgement Kala gives for feedback.
  * @param {any} client
  * @param {string | undefined} channelId
  * @param {string} userId

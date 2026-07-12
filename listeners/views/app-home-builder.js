@@ -1,5 +1,5 @@
-import { getOrgTypeById, ORG_TYPES } from '../org-types.js';
-import { actions, button, context, divider, header, section } from './kit.js';
+import { ARTS_CULTURE } from '../arts-culture.js';
+import { button, context, divider, header, section } from './kit.js';
 import { buildPromptButtons } from './onboarding-builder.js';
 
 /**
@@ -11,26 +11,15 @@ import { buildPromptButtons } from './onboarding-builder.js';
  * @property {string} cta - Short button label for the card accessory (<= 75 chars).
  */
 
-/** One-line tagline under the Benvu name in the branded header. */
-export const TAGLINE = 'Find funding, write reports, and hit every deadline, in any language.';
+/** One-line tagline under the Kala name in the branded header. */
+export const TAGLINE = 'Find arts funding, write reports, and hit every deadline, in any language.';
 
-/** One-to-two line description of what Benvu is and who it's for (branded header). */
+/** One-to-two line description of what Kala is and who it's for (branded header). */
 export const DESCRIPTION =
-  "I'm Benvu, an AI teammate for nonprofit staff. Tell me what you need, in any language, and I'll " +
-  'find the grant, draft the report, or track the deadline.';
+  "I'm Kala, an AI teammate for arts and culture nonprofits. Tell me what you need, in any language, and " +
+  "I'll find the grant, draft the report, or track the deadline.";
 
-/** Pre-selection (org-type picker) intro copy. Its own short, warm block set. */
-export const PICKER_TAGLINE = 'Your AI teammate for nonprofits.';
-export const PICKER_VALUE = 'I find real grants, draft your reports, and track every deadline.';
-export const PICKER_PROMPT = "What kind of work do you do? I'll tailor everything to it.";
-
-/** Value carried by the "Change organization type" control. */
-export const CHANGE_ORG_VALUE = '__change_org_type__';
-
-/** Action ID for the "Change organization type" button. */
-export const CHANGE_ORG_ACTION = 'change_org_type';
-
-/** The full set of actions Benvu can take from the Home tab. */
+/** The full set of actions Kala can take from the Home tab. */
 /** @type {Category[]} */
 export const CATEGORIES = [
   {
@@ -75,6 +64,27 @@ export const CATEGORIES = [
     description: 'Post a clear call for volunteers for an upcoming shift or event.',
     cta: 'Create post',
   },
+  {
+    actionId: 'category_track_engagement',
+    text: 'Track an Engagement',
+    value: 'Track an Engagement',
+    description: 'Track contracts, W-9s, and invoices for each artist or contractor.',
+    cta: 'Track engagement',
+  },
+  {
+    actionId: 'category_track_event',
+    text: 'Track Event RSVPs',
+    value: 'Track Event RSVPs',
+    description: 'Collect RSVPs for a free event and get a live head count.',
+    cta: 'Track RSVPs',
+  },
+  {
+    actionId: 'category_track_schedule',
+    text: 'Track a Schedule Change',
+    value: 'Track a Schedule Change',
+    description: 'Post a schedule change and track who has confirmed they saw it.',
+    cta: 'Track change',
+  },
 ];
 
 /**
@@ -90,38 +100,36 @@ export function greeting(now, firstName) {
   return name ? `Good ${partOfDay}, ${name}!` : `Good ${partOfDay}!`;
 }
 
-/** How people can reach Benvu, shown as a footer context line. */
+/** How people can reach Kala, shown as a footer context line. */
 const REACH_LINE =
-  'Reach me anytime: send a direct message, mention @Benvu in a channel, or use /grant, /report, or /deadline.';
+  'Reach me anytime: send a direct message, mention @Kala in a channel, or use /grant, /report, or /deadline.';
 
 /**
- * Order the six actions with this org type's most-used ones first, so the
+ * Order the six actions with the arts and culture most-used ones first, so the
  * primary button is the action they're most likely to want.
- * @param {import('../org-types.js').OrgType} org
  * @returns {Category[]}
  */
-function orderedActions(org) {
-  const primary = org.primaryActions.map((id) => CATEGORIES.find((c) => c.actionId === id)).filter(Boolean);
-  const rest = CATEGORIES.filter((c) => !org.primaryActions.includes(c.actionId));
+function orderedActions() {
+  const primary = ARTS_CULTURE.primaryActions.map((id) => CATEGORIES.find((c) => c.actionId === id)).filter(Boolean);
+  const rest = CATEGORIES.filter((c) => !ARTS_CULTURE.primaryActions.includes(c.actionId));
   return /** @type {Category[]} */ ([...primary, ...rest]);
 }
 
 /**
- * This org type's operational-language prompt rows: the tailored prompts, plus a
- * separate row of RTS-grounded prompts (framed to search the team's own channels)
- * when the type defines them. Clicking a prompt runs it via the shared
- * prompt_run_ handler, which opens a DM from the Home tab. Emoji-free by design.
- * @param {import('../org-types.js').OrgType} org
+ * The arts and culture operational-language prompt rows: the tailored prompts,
+ * plus a separate row of RTS-grounded prompts (framed to search the team's own
+ * channels). Clicking a prompt runs it via the shared prompt_run_ handler, which
+ * opens a DM from the Home tab. Emoji-free by design.
  * @returns {import('@slack/types').KnownBlock[]}
  */
-function tailoredPromptBlocks(org) {
+function tailoredPromptBlocks() {
   /** @type {import('@slack/types').KnownBlock[]} */
   const blocks = [section('*A few things I can do for you*')];
-  blocks.push(buildPromptButtons(org.tailoredPrompts, 'home_tailored_prompts'));
+  blocks.push(buildPromptButtons(ARTS_CULTURE.tailoredPrompts, 'home_tailored_prompts'));
 
-  if (org.rtsPrompts?.length) {
+  if (ARTS_CULTURE.rtsPrompts?.length) {
     // Offset the action_ids past the tailored ones so both rows coexist in the view.
-    blocks.push(buildPromptButtons(org.rtsPrompts, 'home_rts_prompts', org.tailoredPrompts.length));
+    blocks.push(buildPromptButtons(ARTS_CULTURE.rtsPrompts, 'home_rts_prompts', ARTS_CULTURE.tailoredPrompts.length));
     blocks.push(context("These search your team's own channels, so answers reflect what people actually said."));
   }
   blocks.push(divider());
@@ -130,13 +138,12 @@ function tailoredPromptBlocks(org) {
 
 /**
  * The six actions as "card" section blocks: each a bold title with a one-line
- * description and a button accessory. The org's #1 action leads and is the only
- * card with a primary button; dividers sit between cards to group them.
- * @param {import('../org-types.js').OrgType} org
+ * description and a button accessory. The #1 arts and culture action leads and is
+ * the only card with a primary button; dividers sit between cards to group them.
  * @returns {import('@slack/types').KnownBlock[]}
  */
-function actionCards(org) {
-  const ordered = orderedActions(org);
+function actionCards() {
+  const ordered = orderedActions();
 
   /** @type {import('@slack/types').KnownBlock[]} */
   const blocks = [];
@@ -148,7 +155,7 @@ function actionCards(org) {
       text: cat.cta,
       actionId: cat.actionId,
       value: cat.value,
-      // Exactly one primary button in the view: the org's most-used action.
+      // Exactly one primary button in the view: the most-used action.
       ...(i === 0 ? { style: 'primary' } : {}),
     });
     const card = section(`*${cat.text}*\n${cat.description}`, accessory);
@@ -160,43 +167,22 @@ function actionCards(org) {
 }
 
 /**
- * The org-type picker shown on first open: rows of three plain buttons. None is
- * styled primary — the six choices are equally weighted.
- * @returns {import('@slack/types').ActionsBlock[]}
- */
-function orgTypeRows() {
-  /** @type {import('@slack/types').ActionsBlock[]} */
-  const rows = [];
-  for (let i = 0; i < ORG_TYPES.length; i += 3) {
-    const buttons = ORG_TYPES.slice(i, i + 3).map((t) =>
-      button({ text: t.label, actionId: `orgtype_${t.id}`, value: t.id }),
-    );
-    rows.push(actions(`org_type_select_${i / 3 + 1}`, buttons));
-  }
-  return rows;
-}
-
-/**
  * The stable branded header: app name, tagline, and a short description, closed
- * with a divider. Identical for every user and every org type — the personalized
- * content sits below it. Emoji-free; the app avatar renders natively in Slack's
- * Messages/DM header, so the body needs no logo image.
+ * with a divider. Identical for every user — the personalized content sits below
+ * it. Emoji-free; the app avatar renders natively in Slack's Messages/DM header,
+ * so the body needs no logo image.
  * @returns {import('@slack/types').KnownBlock[]}
  */
 function brandHeaderBlocks() {
-  return [header('Benvu'), section(TAGLINE), section(DESCRIPTION), divider()];
+  return [header('Kala'), section(TAGLINE), section(DESCRIPTION), divider()];
 }
 
 /**
- * Build the App Home view.
- *
- * First open (no org type): name, purpose, a friendly setup prompt, and the
- * org-type picker. After onboarding: a personalized greeting, the six actions as
- * cards (the org's #1 action leading, styled primary), and a light footer with
- * the change-organization control and how to reach Benvu.
+ * Build the App Home view — an Arts & Culture assistant from the first screen, no
+ * selection step: a personalized greeting, the arts and culture prompt rows, the
+ * six actions as cards (the #1 action leading, styled primary), and a light footer.
  *
  * @param {string | null} [_botUserId] - Unused; kept so existing call sites stay unchanged.
- * @param {string | null} [orgType] - The user's stored org type id, if any.
  * @param {{ firstName?: string, now?: Date, notice?: string, closingSoon?: { count: number, label: string } | null }} [opts] -
  *   Personalization: the user's first name (for the greeting), the current time
  *   (injected for testability), a transient `notice` banner shown once at the top,
@@ -204,34 +190,15 @@ function brandHeaderBlocks() {
  *   informational context line — omitted entirely when null/absent.
  * @returns {import('@slack/types').HomeView}
  */
-export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
-  const org = getOrgTypeById(orgType);
+export function buildAppHomeView(_botUserId = null, opts = {}) {
   const notice = (opts.notice || '').trim();
-
-  if (!org) {
-    // Pre-selection: a short branded intro, then one question and the picker.
-    // Nothing trails the buttons — a clean descent from name to choice.
-    /** @type {import('@slack/types').KnownBlock[]} */
-    const blocks = [
-      header('Benvu'),
-      section(PICKER_TAGLINE),
-      section(PICKER_VALUE),
-      divider(),
-      section(PICKER_PROMPT),
-      ...orgTypeRows(),
-    ];
-    return { type: 'home', blocks };
-  }
-
-  // Onboarded — a warm greeting, the action cards, then a receding footer.
   const now = opts.now instanceof Date ? opts.now : new Date();
 
   /** @type {import('@slack/types').KnownBlock[]} */
   // Stable branded header first (same for everyone), then the personalized body.
-  /** @type {import('@slack/types').KnownBlock[]} */
   const blocks = [...brandHeaderBlocks()];
 
-  // Personalized greeting as a bold section — not a second header, so "Benvu"
+  // Personalized greeting as a bold section — not a second header, so "Kala"
   // stays the largest element.
   blocks.push(section(`*${greeting(now, opts.firstName)}*`));
 
@@ -249,18 +216,12 @@ export function buildAppHomeView(_botUserId = null, orgType = null, opts = {}) {
   }
   blocks.push(divider());
 
-  blocks.push(...tailoredPromptBlocks(org));
-  blocks.push(...actionCards(org));
+  blocks.push(...tailoredPromptBlocks());
+  blocks.push(...actionCards());
 
-  // Footer: the change-org control (a button can't live in a context block, so it
-  // stays a plain, un-styled actions block), then the lighter context lines.
+  // Footer: a light reminder of how to reach Kala.
   blocks.push(divider());
-  blocks.push(
-    actions('org_settings', [
-      button({ text: 'Change organization type', actionId: CHANGE_ORG_ACTION, value: CHANGE_ORG_VALUE }),
-    ]),
-  );
-  blocks.push(context(`Tailored for ${org.label}.`, REACH_LINE));
+  blocks.push(context(`Tailored for ${ARTS_CULTURE.label} nonprofits.`, REACH_LINE));
 
   return { type: 'home', blocks };
 }
