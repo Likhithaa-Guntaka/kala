@@ -43,7 +43,10 @@ describe('buildAppHomeView', () => {
   describe('branded header', () => {
     it('does not render a branded header in the onboarded view', () => {
       const blocks = buildAppHomeView(null, homeOpts).blocks;
-      assert.strictEqual(blocks.find((b) => b.type === 'header'), undefined);
+      assert.strictEqual(
+        blocks.find((b) => b.type === 'header'),
+        undefined,
+      );
       assert.ok(!blocks.some((b) => b.text?.text === TAGLINE));
       assert.ok(!blocks.some((b) => b.text?.text === DESCRIPTION));
     });
