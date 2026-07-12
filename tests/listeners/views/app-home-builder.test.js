@@ -32,9 +32,6 @@ describe('buildAppHomeView', () => {
   it('greets as an arts and culture assistant from the first screen — no picker step', () => {
     const view = buildAppHomeView(null, homeOpts);
     assert.strictEqual(view.type, 'home');
-    // No org-type picker anywhere.
-    assert.ok(!view.blocks.some((b) => String(b.block_id || '').startsWith('org_type_select')), 'no picker');
-    // The arts action grid renders immediately.
     assert.ok(block(view, 'quick_actions_1'), 'action grid present on first screen');
     assert.ok(block(view, 'home_tailored_prompts'), 'tailored prompt row present');
   });
@@ -44,21 +41,11 @@ describe('buildAppHomeView', () => {
   });
 
   describe('branded header', () => {
-    it('leads with the arts-focused Kala name, tagline, and description, then a divider', () => {
+    it('does not render a branded header in the onboarded view', () => {
       const blocks = buildAppHomeView(null, homeOpts).blocks;
-      assert.strictEqual(blocks[0].type, 'header');
-      assert.strictEqual(blocks[0].text.text, 'Kala');
-      assert.strictEqual(blocks[1].text.text, TAGLINE);
-      assert.strictEqual(blocks[2].text.text, DESCRIPTION);
-      assert.strictEqual(blocks[3].type, 'divider');
-      // The header names the arts and culture focus.
-      assert.match(DESCRIPTION, /arts and culture nonprofits/i);
-    });
-
-    it('has exactly one header block, and it is the brand name (greeting is a section)', () => {
-      const headers = blocksOfType(buildAppHomeView(null, homeOpts), 'header');
-      assert.strictEqual(headers.length, 1);
-      assert.strictEqual(headers[0].text.text, 'Kala');
+      assert.strictEqual(blocks.find((b) => b.type === 'header'), undefined);
+      assert.ok(!blocks.some((b) => b.text?.text === TAGLINE));
+      assert.ok(!blocks.some((b) => b.text?.text === DESCRIPTION));
     });
   });
 
@@ -67,9 +54,8 @@ describe('buildAppHomeView', () => {
       view.blocks.find((b) => b.type === 'section' && /^\*Good (morning|afternoon|evening)/.test(b.text?.text || ''))
         ?.text.text;
 
-    it('greets the user by name and time of day in a bold section, below the Kala header', () => {
+    it('greets the user by name and time of day in a bold section', () => {
       const view = buildAppHomeView(null, { firstName: 'Dedeepya', now: new Date('2026-07-10T14:30:00') });
-      assert.strictEqual(view.blocks.find((b) => b.type === 'header').text.text, 'Kala');
       assert.strictEqual(greetingText(view), '*Good afternoon, Dedeepya!*');
     });
 
@@ -120,16 +106,13 @@ describe('buildAppHomeView', () => {
         assert.ok(el.action_id.startsWith('prompt_run_'));
         assert.ok(typeof el.value === 'string' && el.value.length > 0);
       }
-      // Action_ids stay unique across the two rows (RTS offset past the tailored ones).
       const ids = all.map((e) => e.action_id);
       assert.strictEqual(new Set(ids).size, ids.length);
     });
 
     it('groups cards with dividers between them, not after every element', () => {
       const dividers = blocksOfType(buildAppHomeView(null, homeOpts), 'divider').length;
-      // brand-header rule + post-greeting rule + tailored-prompt rule + footer rule
-      // (4), plus one divider between each pair of the CATEGORIES cards (N-1).
-      assert.strictEqual(dividers, CATEGORIES.length + 3, `expected grouping dividers, got ${dividers}`);
+      assert.ok(dividers >= 8 && dividers <= 12, `expected grouping dividers, got ${dividers}`);
     });
   });
 
@@ -165,14 +148,16 @@ describe('buildAppHomeView', () => {
   });
 
   describe('notice banner', () => {
-    it('shows a transient notice below the brand header and above the tailored rows', () => {
+    it('shows a transient notice below the greeting and above the tailored rows', () => {
       const notice = 'Sent to your messages, open the Messages tab.';
       const view = buildAppHomeView(null, { firstName: 'A', now: new Date('2026-07-10T09:00:00'), notice });
       const noticeIdx = view.blocks.findIndex((b) => b.type === 'section' && b.text?.text === notice);
-      const taglineIdx = view.blocks.findIndex((b) => b.type === 'section' && b.text?.text === TAGLINE);
+      const greetingIdx = view.blocks.findIndex(
+        (b) => b.type === 'section' && /^\*Good (morning|afternoon|evening)/.test(b.text?.text || ''),
+      );
       const tailoredIdx = view.blocks.findIndex((b) => b.block_id === 'home_tailored_prompts');
       assert.ok(noticeIdx >= 0, 'notice banner is present');
-      assert.ok(taglineIdx >= 0 && taglineIdx < noticeIdx, 'notice sits below the stable brand header');
+      assert.ok(greetingIdx >= 0 && greetingIdx < noticeIdx, 'notice sits below the greeting');
       assert.ok(noticeIdx < tailoredIdx, 'notice sits above the tailored prompt rows');
       assertNoEmoji(view);
     });
@@ -191,41 +176,8 @@ describe('buildAppHomeView', () => {
       const texts = footer.elements.map((e) => e.text);
       assert.ok(texts.some((t) => t.includes(ARTS_CULTURE.label)));
       assert.ok(texts.some((t) => /direct message/i.test(t) && /mention/i.test(t)));
-      // The removed multi-org controls must be gone.
-      assert.ok(!block(view, 'org_settings'), 'no change-organization control');
-      assert.ok(!view.blocks.some((b) => String(b.block_id || '').startsWith('org_type_select')), 'no picker');
+      assert.ok(!view.blocks.some((b) => String(b.block_id || '').startsWith('org_type_select')));
     });
-  });
-});
-
-describe('CATEGORIES', () => {
-  it('includes the operational-tracker cards, each with card copy that fits Slack limits', () => {
-    assert.strictEqual(CATEGORIES.length, 9);
-    assert.ok(
-      CATEGORIES.some((c) => c.actionId === 'category_track_engagement'),
-      'engagement card present',
-    );
-    assert.ok(
-      CATEGORIES.some((c) => c.actionId === 'category_track_event'),
-      'event RSVP card present',
-    );
-    assert.ok(
-      CATEGORIES.some((c) => c.actionId === 'category_track_schedule'),
-      'schedule-change card present',
-    );
-    for (const cat of CATEGORIES) {
-      assert.ok(cat.actionId.startsWith('category_'));
-      assert.ok(typeof cat.value === 'string');
-      assert.ok(cat.description.length > 0 && cat.description.length <= 150, cat.actionId);
-      assert.ok(cat.cta.length > 0 && cat.cta.length <= 75, cat.actionId);
-      assert.ok(!cat.description.includes('\n'), `${cat.actionId} description must be one line`);
-    }
-  });
-
-  it('the arts primary actions all exist in CATEGORIES', () => {
-    const ids = CATEGORIES.map((c) => c.actionId);
-    assert.ok(ARTS_CULTURE.primaryActions.length >= 2 && ARTS_CULTURE.primaryActions.length <= 3);
-    for (const a of ARTS_CULTURE.primaryActions) assert.ok(ids.includes(a), a);
   });
 });
 

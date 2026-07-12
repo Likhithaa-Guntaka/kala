@@ -45,14 +45,11 @@ describe('handleAppHomeOpened', () => {
     });
     const event = { tab: 'home', channel: 'D123' };
     await handleAppHomeOpened({ client: fakeClient, event, context: fakeContext, logger: fakeLogger });
-    // A failed name fetch must not break the tab — it just greets neutrally.
     assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
     assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
   });
 
   it('still publishes the home view when users.info hangs (does not block the render)', async () => {
-    // users.info never resolves — the 2s timeout in fetchFirstName must fire so
-    // the Home tab renders with a neutral greeting instead of blocking forever.
     fakeClient.users.info = mock.fn(() => new Promise(() => {}));
     mock.timers.enable({ apis: ['setTimeout'] });
     try {
@@ -63,14 +60,11 @@ describe('handleAppHomeOpened', () => {
         context: fakeContext,
         logger: fakeLogger,
       });
-      // Advance past the 2s name-fetch timeout instantly (no real wait).
       mock.timers.tick(2001);
       await pending;
 
       assert.strictEqual(fakeClient.views.publish.mock.callCount(), 1);
       assert.strictEqual(fakeLogger.error.mock.callCount(), 0);
-      // Greeting fell back to the neutral form (no ", Name!"). It's a bold section
-      // now, below the stable "Kala" header.
       const view = fakeClient.views.publish.mock.calls[0].arguments[0].view;
       const greeting = view.blocks.find(
         (b) => b.type === 'section' && /^\*Good (morning|afternoon|evening)!\*$/.test(b.text?.text || ''),

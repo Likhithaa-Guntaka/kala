@@ -4,10 +4,17 @@ import { describe, it } from 'node:test';
 import {
   buildGrantResults,
   GRANT_TRACK_ACTION,
+  GRANT_VIEW_ACTION,
   grantCardsFor,
   trackValue,
 } from '../../../listeners/views/grant-results-builder.js';
 import { assertNoEmoji } from '../../helpers/no-emoji.js';
+
+/** The fields of a card as a flat list of "label|value" strings. @param {any[]} blocks */
+function fieldPairs(blocks) {
+  const f = blocks.find((b) => b.type === 'section' && b.fields);
+  return f ? f.fields.map((cell) => cell.text) : [];
+}
 
 /** A structured grant fixture. */
 function grant(overrides = {}) {
@@ -24,19 +31,34 @@ function grant(overrides = {}) {
 }
 
 describe('buildGrantResults', () => {
-  it('renders one card per grant: linked title, amount/deadline fields, agency context', () => {
+  it('renders a linked title and a 2x2 fields grid (Amount|Deadline / Agency|Category)', () => {
     const blocks = buildGrantResults([grant()], { language: 'en' });
 
     const title = blocks.find((b) => b.type === 'section' && b.text);
     assert.ok(title.text.text.includes('<https://www.grants.gov/search-results-detail/111|Youth Mental Health Grant>'));
 
-    const fields = blocks.find((b) => b.type === 'section' && b.fields);
-    const fieldText = fields.fields.map((f) => f.text).join('\n');
-    assert.ok(fieldText.includes('*Amount*') && fieldText.includes('$50,000'));
-    assert.ok(fieldText.includes('*Deadline*') && fieldText.includes('Aug 9, 2026'));
+    // Exactly four field cells, in reading order: Amount, Deadline, Agency, Category.
+    const pairs = fieldPairs(blocks);
+    assert.strictEqual(pairs.length, 4);
+    assert.strictEqual(pairs[0], '*Amount*\n$50,000');
+    assert.strictEqual(pairs[1], '*Deadline*\nAug 9, 2026');
+    assert.strictEqual(pairs[2], '*Agency*\nHHS');
+    assert.strictEqual(pairs[3], '*Category*\nhealth');
 
-    const ctx = blocks.find((b) => b.type === 'context');
-    assert.ok(ctx.elements[0].text.includes('Agency: HHS'));
+    // Agency/category no longer live in a context line — the only context block
+    // is the source footer.
+    const contexts = blocks.filter((b) => b.type === 'context');
+    assert.strictEqual(contexts.length, 1);
+    assert.ok(contexts[0].elements[0].text.includes('Grants.gov'));
+    assert.ok(!contexts[0].elements[0].text.includes('Agency'));
+  });
+
+  it('gracefully drops the Category cell when category is absent (Agency stands alone)', () => {
+    const pairs = fieldPairs(buildGrantResults([grant({ category: undefined })], { language: 'en' }));
+    assert.strictEqual(pairs.length, 3);
+    assert.deepStrictEqual(pairs, ['*Amount*\n$50,000', '*Deadline*\nAug 9, 2026', '*Agency*\nHHS']);
+    // No blank/empty Category cell leaked in.
+    assert.ok(!pairs.some((p) => p.includes('*Category*')));
   });
 
   it('attaches a Track deadline accessory carrying the title and ISO date', () => {
@@ -47,22 +69,35 @@ describe('buildGrantResults', () => {
     assert.deepStrictEqual(JSON.parse(title.accessory.value), { t: 'Youth Mental Health Grant', d: '2026-08-09' });
   });
 
-  it('omits the Track button when there is no firm ISO date', () => {
+  it('falls back to a "View opportunity" URL button when there is no ISO date but a url', () => {
     const blocks = buildGrantResults([grant({ deadlineIso: undefined })], { language: 'en' });
+    const title = blocks.find((b) => b.type === 'section' && b.text);
+    assert.ok(title.accessory, 'has a fallback accessory');
+    assert.strictEqual(title.accessory.action_id, GRANT_VIEW_ACTION);
+    assert.strictEqual(title.accessory.text.text, 'View opportunity');
+    assert.strictEqual(title.accessory.url, 'https://www.grants.gov/search-results-detail/111');
+    assert.strictEqual(title.accessory.style, undefined, 'default style');
+    assert.strictEqual(title.accessory.value, undefined, 'URL button carries no value');
+  });
+
+  it('has no accessory when there is neither an ISO date nor a url', () => {
+    const blocks = buildGrantResults([grant({ deadlineIso: undefined, url: undefined })], { language: 'en' });
     const title = blocks.find((b) => b.type === 'section' && b.text);
     assert.strictEqual(title.accessory, undefined);
   });
 
-  it('localizes the static labels (Spanish)', () => {
-    const blocks = buildGrantResults([grant()], { language: 'es' });
-    const fields = blocks.find((b) => b.type === 'section' && b.fields);
-    const fieldText = fields.fields.map((f) => f.text).join('\n');
-    assert.ok(fieldText.includes('*Monto*'));
-    assert.ok(fieldText.includes('*Fecha límite*'));
-    const title = blocks.find((b) => b.type === 'section' && b.accessory);
-    assert.strictEqual(title.accessory.text.text, 'Seguir plazo');
-    const ctx = blocks.find((b) => b.type === 'context');
-    assert.ok(ctx.elements[0].text.includes('Agencia: HHS'));
+  it('localizes the fields, the Track button, and the View opportunity button (Spanish/French)', () => {
+    const es = buildGrantResults([grant()], { language: 'es' });
+    const esPairs = fieldPairs(es);
+    assert.ok(esPairs[0].includes('*Monto*'));
+    assert.ok(esPairs[1].includes('*Fecha límite*'));
+    assert.ok(esPairs[2].includes('*Agencia*\nHHS'));
+    assert.ok(esPairs[3].includes('*Categoría*'));
+    assert.strictEqual(es.find((b) => b.accessory).accessory.text.text, 'Seguir plazo');
+
+    // The fallback button is localized too.
+    const fr = buildGrantResults([grant({ deadlineIso: undefined })], { language: 'fr' });
+    assert.strictEqual(fr.find((b) => b.accessory).accessory.text.text, 'Voir l’offre');
   });
 
   it('caps at the limit and shows a localized "+N more" note when truncated', () => {
@@ -75,8 +110,19 @@ describe('buildGrantResults', () => {
     assert.ok(footer.elements[0].text.includes('+3 more'));
   });
 
-  it('has no emoji', () => {
-    assertNoEmoji(buildGrantResults([grant(), grant({ title: 'Another' })], { language: 'fr' }));
+  it('has no emoji (Track button, View opportunity fallback, and no-accessory cards)', () => {
+    for (const language of ['en', 'es', 'fr', 'de', 'pt', 'it']) {
+      assertNoEmoji(
+        buildGrantResults(
+          [
+            grant(), // Track deadline button
+            grant({ title: 'No date', deadlineIso: undefined }), // View opportunity fallback
+            grant({ title: 'Bare', deadlineIso: undefined, url: undefined, category: undefined }), // no accessory
+          ],
+          { language },
+        ),
+      );
+    }
   });
 });
 

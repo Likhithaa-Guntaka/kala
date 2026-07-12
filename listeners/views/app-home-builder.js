@@ -1,5 +1,5 @@
 import { ARTS_CULTURE } from '../arts-culture.js';
-import { button, context, divider, header, section } from './kit.js';
+import { button, context, divider, section } from './kit.js';
 import { buildPromptButtons } from './onboarding-builder.js';
 
 /**
@@ -128,7 +128,6 @@ function tailoredPromptBlocks() {
   blocks.push(buildPromptButtons(ARTS_CULTURE.tailoredPrompts, 'home_tailored_prompts'));
 
   if (ARTS_CULTURE.rtsPrompts?.length) {
-    // Offset the action_ids past the tailored ones so both rows coexist in the view.
     blocks.push(buildPromptButtons(ARTS_CULTURE.rtsPrompts, 'home_rts_prompts', ARTS_CULTURE.tailoredPrompts.length));
     blocks.push(context("These search your team's own channels, so answers reflect what people actually said."));
   }
@@ -148,18 +147,15 @@ function actionCards() {
   /** @type {import('@slack/types').KnownBlock[]} */
   const blocks = [];
   ordered.forEach((cat, i) => {
-    // A divider before every card except the first — grouping, not a wall of lines.
     if (i > 0) blocks.push(divider());
 
     const accessory = button({
       text: cat.cta,
       actionId: cat.actionId,
       value: cat.value,
-      // Exactly one primary button in the view: the most-used action.
       ...(i === 0 ? { style: 'primary' } : {}),
     });
     const card = section(`*${cat.text}*\n${cat.description}`, accessory);
-    // Stable block_id on the leading card so tests/handlers can find the grid.
     if (i === 0) card.block_id = 'quick_actions_1';
     blocks.push(card);
   });
@@ -167,20 +163,12 @@ function actionCards() {
 }
 
 /**
- * The stable branded header: app name, tagline, and a short description, closed
- * with a divider. Identical for every user — the personalized content sits below
- * it. Emoji-free; the app avatar renders natively in Slack's Messages/DM header,
- * so the body needs no logo image.
- * @returns {import('@slack/types').KnownBlock[]}
- */
-function brandHeaderBlocks() {
-  return [header('Kala'), section(TAGLINE), section(DESCRIPTION), divider()];
-}
-
-/**
- * Build the App Home view — an Arts & Culture assistant from the first screen, no
- * selection step: a personalized greeting, the arts and culture prompt rows, the
- * six actions as cards (the #1 action leading, styled primary), and a light footer.
+ * Build the App Home view for Kala.
+ *
+ * The Home opens directly into a personalized greeting, the arts and culture
+ * prompt rows, the action cards, and a light footer. The branded header is not
+ * repeated in the onboarded view, so the greeting and cards remain the primary
+ * focus.
  *
  * @param {string | null} [_botUserId] - Unused; kept so existing call sites stay unchanged.
  * @param {{ firstName?: string, now?: Date, notice?: string, closingSoon?: { count: number, label: string } | null }} [opts] -
@@ -195,20 +183,12 @@ export function buildAppHomeView(_botUserId = null, opts = {}) {
   const now = opts.now instanceof Date ? opts.now : new Date();
 
   /** @type {import('@slack/types').KnownBlock[]} */
-  // Stable branded header first (same for everyone), then the personalized body.
-  const blocks = [...brandHeaderBlocks()];
+  const blocks = [section(`*${greeting(now, opts.firstName)}*`)];
 
-  // Personalized greeting as a bold section — not a second header, so "Kala"
-  // stays the largest element.
-  blocks.push(section(`*${greeting(now, opts.firstName)}*`));
-
-  // A transient confirmation banner, shown once after a Home action.
   if (notice) {
     blocks.push(section(notice));
   }
 
-  // Optional live "closing soon" line — strictly additive, present only when the
-  // count came back in time. Rendered as a plain context line, never a button.
   const closingSoon = opts.closingSoon;
   if (closingSoon && closingSoon.count > 0) {
     const grants = closingSoon.count === 1 ? 'grant' : 'grants';
@@ -219,7 +199,6 @@ export function buildAppHomeView(_botUserId = null, opts = {}) {
   blocks.push(...tailoredPromptBlocks());
   blocks.push(...actionCards());
 
-  // Footer: a light reminder of how to reach Kala.
   blocks.push(divider());
   blocks.push(context(`Tailored for ${ARTS_CULTURE.label} nonprofits.`, REACH_LINE));
 

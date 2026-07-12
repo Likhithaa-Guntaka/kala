@@ -27,6 +27,15 @@ describe('grantLabels', () => {
     assert.strictEqual(grantLabels('xx').agency, 'Agency'); // unknown -> English
   });
 
+  it('has a localized viewOpportunity label for every supported language', () => {
+    assert.strictEqual(grantLabels('en').viewOpportunity, 'View opportunity');
+    assert.strictEqual(grantLabels('es').viewOpportunity, 'Ver oportunidad');
+    assert.strictEqual(grantLabels('fr').viewOpportunity, 'Voir l’offre');
+    assert.strictEqual(grantLabels('de').viewOpportunity, 'Ausschreibung ansehen');
+    assert.strictEqual(grantLabels('pt').viewOpportunity, 'Ver oportunidade');
+    assert.strictEqual(grantLabels('it').viewOpportunity, 'Vedi opportunità');
+  });
+
   it('localizes the "+N more" line', () => {
     assert.ok(grantLabels('es').more(3).includes('3'));
     assert.ok(/más/.test(grantLabels('es').more(3)));
