@@ -40,14 +40,18 @@ describe('buildAppHomeView', () => {
     assertNoEmoji(buildAppHomeView(null, homeOpts));
   });
 
-  it('leads with the Kala wordmark image from the kala repo', () => {
+  it('leads with the Kala wordmark image, then the greeting section', () => {
     const blocks = buildAppHomeView(null, homeOpts).blocks;
+    // blocks[0]: the wordmark image from the kala repo.
     assert.strictEqual(blocks[0].type, 'image');
     assert.strictEqual(
       blocks[0].image_url,
       'https://raw.githubusercontent.com/Likhithaa-Guntaka/kala/main/assets/kala-wordmark.png',
     );
     assert.ok(/^Kala —/.test(blocks[0].alt_text));
+    // blocks[1]: the bold greeting section.
+    assert.strictEqual(blocks[1].type, 'section');
+    assert.match(blocks[1].text.text, /^\*Good (morning|afternoon|evening)/);
   });
 
   describe('branded header', () => {
